@@ -1,39 +1,9 @@
-
-######################
-# Constants
-######################
-
-DIGITS = '1234567890'
-
-######################
-# Errors
-######################
-
-class Error:
-    def __init__(self, title, details, pos_start, pos_end):
-        self.pos_start = pos_start
-        self.pos_end = pos_end
-        self.error_title = title
-        self.details = details
-
-    def __repr__(self):
-        res = f'{self.error_title}\n'
-        res += f':{self.pos_start.line + 1} הרושב {self.pos_start.file_name} :ץבוקב הז\n'
-        res += f'{self.details}'
-        return res
-
-class IllegalCharError(Error):
-    def __init__(self, details, pos_start, pos_end): 
-        super().__init__(" ינלאמש הזה ותה ,םירקי םיחרזא", details, pos_start, pos_end)
-
-class InvalidSyntaxError(Error):
-    def __init__(self, details, pos_start, pos_end):
-        super().__init__("הזה חוסינה תא ןיבמ אל ינא יכ ,רפסה תיבל רוזחתש ידכ דיפל", details, pos_start, pos_end)
+from constants import *
+from errors import *
 
 #######################
-# Nodes
-######################
-
+#        Nodes        #
+#######################
 class NumberNode:
     def __init__(self, tok):
         self.token = tok
@@ -46,7 +16,7 @@ class BinOpNode:
         self.lNode = left_node
         self.op_token = op_token
         self.rNode = right_node
-    
+  
     def __repr__(self):
         return f'({self.lNode}, {self.op_token}, {self.rNode})'
 
@@ -59,7 +29,7 @@ class UnaryOpNode:
         return f'({self.op_token}, {self.node})'
 
 ####################
-# Parser
+#      Parser      #
 ####################
 class Parser:
     def __init__(self, tokens):
@@ -126,8 +96,8 @@ class Parser:
         return res.success(left)
 
 ######################
-# Parse Result
-#####################
+#    Parse Result    #
+######################
 class ParseResult:
     def __init__(self):
         self.error = None
@@ -150,9 +120,8 @@ class ParseResult:
         
 
 ######################
-# Position
-#####################
-
+#      Position      #
+######################
 class Position:
     def __init__(self, index, line, column, file_name, file_text):
         self.index = index
@@ -175,22 +144,8 @@ class Position:
         return Position(self.index, self.line, self.column, self.file_name, self.file_text)
 
 ######################
-# Tokens
+#       Tokens       #
 ######################
-
-T_INT = "T_INT"
-T_FLOAT = "FLOAT"
-
-T_PLUS = "PLUS"
-T_MINUS = "MINUS"
-T_MUL = "MUL"
-T_DIV = "DIV"
-
-T_LPAREN = "LPAREN"
-T_RPAREN = "RPAREN"
-
-T_EOF = "EOF"
-
 class Token:
     def __init__(self, type_, value=None, pos_start=None, pos_end=None):
         self.type = type_
@@ -210,7 +165,7 @@ class Token:
         return f'{self.type}'
 
 ######################
-# Lexer
+#       Lexer        #
 ######################
 class Lexer:
     def __init__(self, file_name, text):
@@ -226,7 +181,6 @@ class Lexer:
 
     def create_tokens(self):
         tokens = []
-
         while self.curChar != None:
             if self.curChar in ' \t':
                 self.forward()
@@ -280,15 +234,18 @@ class Lexer:
             return Token(T_FLOAT, float(num_str), pos_start, self.pos)
 
 ########################
-# Run
+#         Run          #
 ########################
 def run(file_name, text):
 
+    # create a lexer object
     lexer = Lexer(file_name, text)
     tokens, error = lexer.create_tokens()
 
+    # if runs into error --> return it
     if error: return None, error
 
+    # create a parser object
     parser = Parser(tokens)
     ast = parser.parse()
 
