@@ -8,7 +8,7 @@ import BBthon
 
 while True:
   text = input('BBthon > ')
-  result, error = BBthon.run('Not a file', text)
+  result, error = BBthon.run('ץבוק אל הז הא', text)
 
   if error: print(error)
   else: print(result)
