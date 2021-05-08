@@ -1,6 +1,6 @@
 DIGITS = '1234567890'
 
-T_INT = "T_INT"
+T_INT = "INT"
 T_FLOAT = "FLOAT"
 
 T_PLUS = "PLUS"

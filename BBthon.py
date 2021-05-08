@@ -2,11 +2,45 @@ from constants import *
 from errors import *
 
 #######################
+#    Runtime Result   #
+#######################
+
+class RTResult:
+    def __init__(self):
+        self.value = None
+        self.error = None
+
+    def register(self, res):
+        if res.error: self.error = res.error
+        return res.value
+
+    def success(self, value):
+        self.value = value
+        return self
+
+    def failure(self, error):
+        self.error = error
+        return self
+
+#######################
+#       Context       #
+#######################
+
+class Context:
+    def __init__(self, dis_name, parent=None, parent_position=None):
+        self.dis_name = dis_name
+        self.parent = parent
+        self.parent_position = parent_position
+
+
+#######################
 #        Nodes        #
 #######################
 class NumberNode:
     def __init__(self, tok):
         self.token = tok
+        self.pos_start = self.token.pos_start
+        self.pos_end = self.token.pos_end
 
     def __repr__(self):
         return f'{self.token}'
@@ -16,7 +50,10 @@ class BinOpNode:
         self.lNode = left_node
         self.op_token = op_token
         self.rNode = right_node
-  
+    
+        self.pos_start = self.lNode.pos_start
+        self.pos_end = self.rNode.pos_end
+
     def __repr__(self):
         return f'({self.lNode}, {self.op_token}, {self.rNode})'
 
@@ -24,6 +61,9 @@ class UnaryOpNode:
     def __init__(self, op_token, node):
         self.op_token = op_token
         self.node = node
+
+        self.pos_start = self.op_token.pos_start
+        self.pos_end = node.pos_end
 
     def __repr__(self):
         return f'({self.op_token}, {self.node})'
@@ -70,7 +110,7 @@ class Parser:
                 res.register(self.forward())
                 return res.success(expr)
             else:
-                return res.failure(InvalidSyntaxError("תרגס אלו קית ילע תחתפ", self.cur_token.pos_start, self.cur_token.pos_end))
+                return res.failure(InvalidSyntaxError("םיירגוס תריגסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
 
         return res.failure(InvalidSyntaxError("רפסמל יתיפיצ", tok.pos_start, tok.pos_end))
 
@@ -152,7 +192,7 @@ class Token:
         self.value = value
 
         if pos_start:
-            self.pos_start = pos_start
+            self.pos_start = pos_start.copy()
             self.pos_end = pos_start.copy()
             self.pos_end.forward()
 
@@ -233,6 +273,104 @@ class Lexer:
         else:
             return Token(T_FLOAT, float(num_str), pos_start, self.pos)
 
+######################
+#       Values       #
+######################
+
+class Number:
+    def __init__(self, value):
+        self.value = value
+        self.set_pos()
+        self.set_context()
+
+    def set_context(self, context=None):
+        self.context = context
+        return self
+
+
+    def set_pos(self, pos_start=None, pos_end=None):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+        return self
+
+    def added_to(self, other):
+        if isinstance(other, Number):
+            return Number(self.value + other.value).set_context(self.context), None
+
+    def substrcted_by(self, other):
+        if isinstance(other, Number):
+            return Number(self.value - other.value).set_context(self.context), None
+
+    def multiplyed_by(self, other):
+        if isinstance(other, Number):
+            return Number(self.value * other.value).set_context(self.context), None
+
+    def divided_by(self, other):
+        if isinstance(other, Number):
+            if other.value == 0:
+                return None, RTError('ץ"גבב קוליח עצבתה',other.pos_start, other.pos_end, self.context)
+
+            return Number(self.value / other.value).set_context(self.context), None
+
+    def __repr__(self):
+        return str(self.value)
+
+
+######################
+#     Interpreter    #
+######################
+
+class Interpreter():
+    def visit(self, node, context):
+        method_name = f'visit_{type(node).__name__}'
+        method = getattr(self, method_name, self.no_visit_method)
+        return method(node, context)
+
+    def no_visit_method(self, node, context):
+        raise Exception(f'No visit_{type(node).__name__} method defined')
+    
+
+    def visit_NumberNode(self, node, context):
+        return RTResult().success(
+        Number(node.token.value).set_context(context).set_pos(node.pos_start, node.pos_end))
+
+    def visit_BinOpNode(self, node, context):
+        res = RTResult()
+        left = res.register(self.visit(node.lNode, context))
+        if res.error: return res
+        right = res.register(self.visit(node.rNode, context))
+        if res.error: return res
+
+        
+        if node.op_token.type == T_PLUS:
+            result, error = left.added_to(right)
+        elif node.op_token.type == T_MINUS:
+            result, error = left.substrcted_by(right)
+        elif node.op_token.type == T_MUL:
+            result, error = left.multiplyed_by(right)
+        elif node.op_token.type == T_DIV:
+            result, error = left.divided_by(right)
+
+        if error:
+            return res.failure(error)
+        else:
+            return res.success(result.set_pos(node.pos_start, node.pos_end))
+
+    def visit_UnaryOpNode(self, node, context):
+        res = RTResult()
+        number = res.register(self.visit(node.node, context))
+        if res.error: return res
+
+        error = None
+
+        if node.op_token.type == T_MINUS:
+            number, Error = number.multiplyed_by(Number(-1))
+
+        if error: 
+            res.failure(error)
+        else:
+            return res.success(number.set_pos(node.pos_start, node.pos_end))
+
 ########################
 #         Run          #
 ########################
@@ -241,12 +379,16 @@ def run(file_name, text):
     # create a lexer object
     lexer = Lexer(file_name, text)
     tokens, error = lexer.create_tokens()
-
-    # if runs into error --> return it
     if error: return None, error
 
     # create a parser object
     parser = Parser(tokens)
     ast = parser.parse()
+    if ast.error: return None, ast.error
 
-    return ast.node, ast.error
+    # create interpreter
+    interpreter = Interpreter()
+    context = Context('~תיסיסבה תינכות~')
+    result = interpreter.visit(ast.node, context)
+
+    return result.value, result.error
