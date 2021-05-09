@@ -89,16 +89,11 @@ class Parser:
             return res.failure(InvalidSyntaxError("- + / * ) ( :ב שמתשת השקבב תיטמתמ הלועפ אל תאז", self.cur_token.pos_start, self.cur_token.pos_end))
         return res
 
-    def factor(self):
+    def atom(self):
         res = ParseResult()
         tok = self.cur_token
 
-        if tok.type in (T_PLUS, T_MINUS):
-            res.register(self.forward())
-            factor = res.register(self.factor())
-            if res.error: return res
-            return res.success(UnaryOpNode(tok, factor))
-        elif tok.type in (T_INT, T_FLOAT):
+        if tok.type in (T_INT, T_FLOAT):
             res.register(self.forward())
             return res.success(NumberNode(tok))
         
@@ -112,7 +107,22 @@ class Parser:
             else:
                 return res.failure(InvalidSyntaxError("םיירגוס תריגסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
 
-        return res.failure(InvalidSyntaxError("רפסמל יתיפיצ", tok.pos_start, tok.pos_end))
+        return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא סונימ ,סולפ ,רפסמל יתיפיצ", tok.pos_start, tok.pos_end))
+
+    def power(self):
+        return self.extract_op(self.atom, (T_POW, ), self.factor)
+
+    def factor(self):
+        res = ParseResult()
+        tok = self.cur_token
+
+        if tok.type in (T_PLUS, T_MINUS):
+            res.register(self.forward())
+            factor = res.register(self.factor())
+            if res.error: return res
+            return res.success(UnaryOpNode(tok, factor))
+
+        return self.power()
 
     def term(self):
         return self.extract_op(self.factor, (T_MUL, T_DIV))
@@ -120,16 +130,19 @@ class Parser:
     def expression(self):
         return self.extract_op(self.term, (T_PLUS, T_MINUS))
 
-    def extract_op(self, func, ops):
+    def extract_op(self, func_a, ops, func_b = None):
+        if func_b == None:
+            func_b = func_a
+            
         res = ParseResult()
-        left = res.register(func())
+        left = res.register(func_a())
         
         if res.error: return res
 
         while self.cur_token.type in ops:
             op_tok = self.cur_token
             res.register(self.forward())
-            right = res.register(func())
+            right = res.register(func_b())
             if res.error: return res
             left = BinOpNode(left, op_tok, right)
 
@@ -238,6 +251,9 @@ class Lexer:
                 self.forward()
             elif self.curChar == '/':
                 tokens.append(Token(T_DIV, pos_start=self.pos))
+                self.forward()
+            elif self.curChar == '^':
+                tokens.append(Token(T_POW, pos_start=self.pos))
                 self.forward() 
             elif self.curChar == '(':
                 tokens.append(Token(T_LPAREN, pos_start=self.pos))
@@ -312,6 +328,10 @@ class Number:
 
             return Number(self.value / other.value).set_context(self.context), None
 
+    def powered_by(self, other):
+        if isinstance(other, Number):
+            return Number(self.value ** other.value).set_context(self.context), None
+
     def __repr__(self):
         return str(self.value)
 
@@ -350,6 +370,8 @@ class Interpreter():
             result, error = left.multiplyed_by(right)
         elif node.op_token.type == T_DIV:
             result, error = left.divided_by(right)
+        elif node.op_token.type == T_POW:
+            result, error = left.powered_by(right)
 
         if error:
             return res.failure(error)
