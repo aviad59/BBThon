@@ -23,6 +23,11 @@ T_PLUS = "PLUS"
 T_MINUS = "MINUS"
 T_MUL = "MUL"
 T_DIV = "DIV"
+<<<<<<< HEAD
+=======
+T_POW = "POW"
+
+>>>>>>> origin/main
 T_LPAREN = "LPAREN"
 T_RPAREN = "RPAREN"
 
