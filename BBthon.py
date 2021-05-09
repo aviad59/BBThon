@@ -2,6 +2,26 @@ from constants import *
 from errors import *
 
 #######################
+#     Symbol Table    #
+#######################
+class SymbolTable:
+    def __init__(self):
+        self.local_symbols_dict = {}  
+        self.global_symbols_dict = None
+
+    def GetValue(self, name):
+        value = self.local_symbols_dict.get(name, None)
+        if value == None and self.parent:
+           value = self.global_symbols_dict.get(name) 
+        return value
+
+    def SetValue(self, name, value):
+        self.local_symbols_dict[name] = value
+
+    def remove(self, name):
+        del self.local_symbols_dict[name]
+
+#######################
 #    Runtime Result   #
 #######################
 
@@ -31,6 +51,7 @@ class Context:
         self.dis_name = dis_name
         self.parent = parent
         self.parent_position = parent_position
+        self.SymbolTable = None
 
 
 #######################
@@ -44,6 +65,21 @@ class NumberNode:
 
     def __repr__(self):
         return f'{self.token}'
+
+
+class VariableAccessNode:
+    def __init__(Self, variable_name):
+        self.variable_name = variable_name
+        self.pos_start = self.variable_name.pos_start
+        self.pos_end = self.variable_name.pos_end
+
+class VariableAssignmentNode:
+    def __init__(Self, variable_name, value):
+        self.variable_name = variable_name 
+        self.value_node = value 
+
+        self.pos_start = self.variable_name.pos_start
+        self.pos_end = self.variable_name.pos_end
 
 class BinOpNode:
     def __init__(self, left_node, op_token, right_node):
@@ -91,18 +127,22 @@ class Parser:
 
     def factor(self):
         res = ParseResult()
-        tok = self.cur_token
+        token = self.cur_token
 
-        if tok.type in (T_PLUS, T_MINUS):
+        if token.type in (T_PLUS, T_MINUS):
             res.register(self.forward())
             factor = res.register(self.factor())
             if res.error: return res
-            return res.success(UnaryOpNode(tok, factor))
-        elif tok.type in (T_INT, T_FLOAT):
+            return res.success(UnaryOpNode(token, factor))
+        elif token.type in (T_INT, T_FLOAT):
             res.register(self.forward())
-            return res.success(NumberNode(tok))
+            return res.success(NumberNode(token))
         
-        elif tok.type == T_LPAREN:
+        #elif token.type == T_IDENTIFIER:
+        #    res.register(self.forward())
+        #    return res.success(VariableAccessNode(token))
+
+        elif token.type == T_LPAREN:
             res.register(self.forward())
             expr = res.register(self.expression())
             if res.error: return res
@@ -112,12 +152,35 @@ class Parser:
             else:
                 return res.failure(InvalidSyntaxError("םיירגוס תריגסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
 
-        return res.failure(InvalidSyntaxError("רפסמל יתיפיצ", tok.pos_start, tok.pos_end))
+        return res.failure(InvalidSyntaxError("יוטיבל יתיפיצ", token.pos_start, token.pos_end))
 
     def term(self):
         return self.extract_op(self.factor, (T_MUL, T_DIV))
     
     def expression(self):
+        res = ParseResult()
+
+        if self.cur_token.match(T_KEYWORD, 'var'):
+            res.register(self.forward())
+
+            if self.cur_token.type != T_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(
+                    "הנ הנ הנ הנו הקפ הקפ יתלביק ךא ההזמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
+                ))
+
+            variable_name = self.cur_token
+            res.register(self.forward())
+
+            if self.cur_token.type != T_EQ:
+                return res.failure(InvalidSyntaxError(
+                    "הנ הנ הנ הנו הקפ הקפ יתלביק ךא '=' ןמיסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
+                ))
+
+            res.register(self.forward())
+            expression = res.register(self.expression())
+            if res.error: return res
+            return res.success(VariableAssignmentNode(variable_name, expression))
+
         return self.extract_op(self.term, (T_PLUS, T_MINUS))
 
     def extract_op(self, func, ops):
@@ -199,6 +262,9 @@ class Token:
         if pos_end:
             self.pos_end = pos_end
 
+    def match(self, type_, value):
+        return self.type == type_ and self.value == value
+
     def __repr__(self):
         if self.value:
             return f'{self.type}:{self.value}'
@@ -226,6 +292,8 @@ class Lexer:
                 self.forward()
             elif self.curChar in DIGITS:
                 tokens.append(self.create_number())
+            elif self.curChar in LETTERS:
+                tokens.append(self.create_identifier)
 
             elif self.curChar == '+':
                 tokens.append(Token(T_PLUS, pos_start=self.pos))
@@ -238,6 +306,9 @@ class Lexer:
                 self.forward()
             elif self.curChar == '/':
                 tokens.append(Token(T_DIV, pos_start=self.pos))
+                self.forward() 
+            elif self.curChar == '=':
+                tokens.append(Token(T_EQ, pos_start=self.pos))
                 self.forward() 
             elif self.curChar == '(':
                 tokens.append(Token(T_LPAREN, pos_start=self.pos))
@@ -253,6 +324,18 @@ class Lexer:
 
         tokens.append(Token(T_EOF, pos_start=self.pos))
         return tokens, None
+
+
+    def create_identifier(self):  
+        id_str = ''
+        pos_start = self.pos.copy() 
+
+        while self.curChar != None and self.curChar in LETTERS_AND_DIGITS + '_':
+            id_str += self.curChar
+            self.forward()
+
+        token_type = T_KEYWORD if id_str in KEYWORDS else T_IDENTIFIER
+        return Token(token_type, id_str, pos_start, self.pos)
 
     def create_number(self):
         num_str = ' '
@@ -276,7 +359,6 @@ class Lexer:
 ######################
 #       Values       #
 ######################
-
 class Number:
     def __init__(self, value):
         self.value = value
@@ -286,7 +368,6 @@ class Number:
     def set_context(self, context=None):
         self.context = context
         return self
-
 
     def set_pos(self, pos_start=None, pos_end=None):
         self.pos_start = pos_start
@@ -319,20 +400,42 @@ class Number:
 ######################
 #     Interpreter    #
 ######################
-
 class Interpreter():
     def visit(self, node, context):
+        
         method_name = f'visit_{type(node).__name__}'
         method = getattr(self, method_name, self.no_visit_method)
         return method(node, context)
 
     def no_visit_method(self, node, context):
-        raise Exception(f'No visit_{type(node).__name__} method defined')
-    
+        raise Exception(f'No visit_{type(node).__name__} method defined')   
 
     def visit_NumberNode(self, node, context):
         return RTResult().success(
         Number(node.token.value).set_context(context).set_pos(node.pos_start, node.pos_end))
+
+    def visit_VariableAccessNode(self, node, context):
+        
+
+        res = RTResult()
+        variable_name = node.var_name_token.value
+        value = context.SymbolTable.get(variable_name)
+
+        if not value:
+            return res.failure(RTError(
+                f"!םואתפ המ ?המ{variable_name}?", node.pos_start, node.pos_end, context
+            ))
+
+        return ress.success(value)
+
+    def visit_VariableAssignmentNode(self, node, context):
+        res = RTResult()
+        variable_name = node.var_name_token.value
+        value = res.register(self.visit(node.value_node, context))
+        if res.error: return res
+        context.symbol_table.SetValue(variable_name, value)
+        return res.success(value)
+
 
     def visit_BinOpNode(self, node, context):
         res = RTResult()
@@ -374,6 +477,10 @@ class Interpreter():
 ########################
 #         Run          #
 ########################
+
+global_symbols_table = SymbolTable()
+global_symbols_table.SetValue('null', Number(0))
+
 def run(file_name, text):
 
     # create a lexer object
@@ -389,6 +496,8 @@ def run(file_name, text):
     # create interpreter
     interpreter = Interpreter()
     context = Context('~תיסיסבה תינכות~')
+    context.SymbolTable = global_symbols_table
+    
     result = interpreter.visit(ast.node, context)
 
     return result.value, result.error
