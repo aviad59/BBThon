@@ -68,13 +68,13 @@ class NumberNode:
 
 
 class VariableAccessNode:
-    def __init__(Self, variable_name):
+    def __init__(self, variable_name):
         self.variable_name = variable_name
         self.pos_start = self.variable_name.pos_start
         self.pos_end = self.variable_name.pos_end
 
 class VariableAssignmentNode:
-    def __init__(Self, variable_name, value):
+    def __init__(self, variable_name, value):
         self.variable_name = variable_name 
         self.value_node = value 
 
@@ -129,22 +129,13 @@ class Parser:
         res = ParseResult()
         token = self.cur_token
 
-<<<<<<< HEAD
-        if token.type in (T_PLUS, T_MINUS):
-            res.register(self.forward())
-            factor = res.register(self.factor())
-            if res.error: return res
-            return res.success(UnaryOpNode(token, factor))
-        elif token.type in (T_INT, T_FLOAT):
-=======
-        if tok.type in (T_INT, T_FLOAT):
->>>>>>> origin/main
+        if token.type in (T_INT, T_FLOAT):
             res.register(self.forward())
             return res.success(NumberNode(token))
         
-        #elif token.type == T_IDENTIFIER:
-        #    res.register(self.forward())
-        #    return res.success(VariableAccessNode(token))
+        elif token.type == T_IDENTIFIER:
+            res.register(self.forward())
+            return res.success(VariableAccessNode(token))
 
         elif token.type == T_LPAREN:
             res.register(self.forward())
@@ -156,9 +147,9 @@ class Parser:
             else:
                 return res.failure(InvalidSyntaxError("םיירגוס תריגסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
 
-<<<<<<< HEAD
+ 
         return res.failure(InvalidSyntaxError("יוטיבל יתיפיצ", token.pos_start, token.pos_end))
-=======
+ 
         return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא סונימ ,סולפ ,רפסמל יתיפיצ", tok.pos_start, tok.pos_end))
 
     def power(self):
@@ -175,7 +166,7 @@ class Parser:
             return res.success(UnaryOpNode(tok, factor))
 
         return self.power()
->>>>>>> origin/main
+ 
 
     def term(self):
         return self.extract_op(self.factor, (T_MUL, T_DIV))
@@ -183,7 +174,7 @@ class Parser:
     def expression(self):
         res = ParseResult()
 
-        if self.cur_token.match(T_KEYWORD, 'var'):
+        if self.cur_token.match(T_KEYWORD, 'שוחד'):
             res.register(self.forward())
 
             if self.cur_token.type != T_IDENTIFIER:
@@ -319,8 +310,7 @@ class Lexer:
             elif self.curChar in DIGITS:
                 tokens.append(self.create_number())
             elif self.curChar in LETTERS:
-                tokens.append(self.create_identifier)
-
+                tokens.append(self.create_identifier())
             elif self.curChar == '+':
                 tokens.append(Token(T_PLUS, pos_start=self.pos))
                 self.forward()
@@ -451,22 +441,22 @@ class Interpreter():
         
 
         res = RTResult()
-        variable_name = node.var_name_token.value
-        value = context.SymbolTable.get(variable_name)
+        variable_name = node.variable_name.value
+        value = context.SymbolTable.GetValue(variable_name)
 
         if not value:
             return res.failure(RTError(
                 f"!םואתפ המ ?המ{variable_name}?", node.pos_start, node.pos_end, context
             ))
 
-        return ress.success(value)
+        return res.success(value)
 
     def visit_VariableAssignmentNode(self, node, context):
         res = RTResult()
-        variable_name = node.var_name_token.value
+        variable_name = node.variable_name.value
         value = res.register(self.visit(node.value_node, context))
         if res.error: return res
-        context.symbol_table.SetValue(variable_name, value)
+        context.SymbolTable.SetValue(variable_name, value)
         return res.success(value)
 
 
