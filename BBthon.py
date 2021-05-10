@@ -11,7 +11,7 @@ class SymbolTable:
 
     def GetValue(self, name):
         value = self.local_symbols_dict.get(name, None)
-        if value == None and self.parent:
+        if value == None and self.global_symbols_dict:
            value = self.global_symbols_dict.get(name) 
         return value
 
@@ -24,7 +24,6 @@ class SymbolTable:
 #######################
 #    Runtime Result   #
 #######################
-
 class RTResult:
     def __init__(self):
         self.value = None
@@ -130,27 +129,28 @@ class Parser:
         token = self.cur_token
 
         if token.type in (T_INT, T_FLOAT):
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
             return res.success(NumberNode(token))
         
         elif token.type == T_IDENTIFIER:
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
             return res.success(VariableAccessNode(token))
 
         elif token.type == T_LPAREN:
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
             expr = res.register(self.expression())
             if res.error: return res
             if self.cur_token.type == T_RPAREN:
-                res.register(self.forward())
+                res.register_advencement()
+                self.forward()
                 return res.success(expr)
             else:
                 return res.failure(InvalidSyntaxError("םיירגוס תריגסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
-
  
-        return res.failure(InvalidSyntaxError("יוטיבל יתיפיצ", token.pos_start, token.pos_end))
- 
-        return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא סונימ ,סולפ ,רפסמל יתיפיצ", tok.pos_start, tok.pos_end))
+        return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", token.pos_start, token.pos_end))
 
     def power(self):
         return self.extract_op(self.atom, (T_POW, ), self.factor)
@@ -160,7 +160,8 @@ class Parser:
         tok = self.cur_token
 
         if tok.type in (T_PLUS, T_MINUS):
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
             factor = res.register(self.factor())
             if res.error: return res
             return res.success(UnaryOpNode(tok, factor))
@@ -175,7 +176,8 @@ class Parser:
         res = ParseResult()
 
         if self.cur_token.match(T_KEYWORD, 'שוחד'):
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
 
             if self.cur_token.type != T_IDENTIFIER:
                 return res.failure(InvalidSyntaxError(
@@ -183,19 +185,25 @@ class Parser:
                 ))
 
             variable_name = self.cur_token
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
 
             if self.cur_token.type != T_EQ:
                 return res.failure(InvalidSyntaxError(
                     "הנ הנ הנ הנו הקפ הקפ יתלביק ךא '=' ןמיסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
                 ))
 
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
             expression = res.register(self.expression())
             if res.error: return res
             return res.success(VariableAssignmentNode(variable_name, expression))
 
-        return self.extract_op(self.term, (T_PLUS, T_MINUS))
+        node = res.register(self.extract_op(self.term, (T_PLUS, T_MINUS)))
+        if res.error: 
+            res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'דחוש' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+
+        return res.success(node)
 
     def extract_op(self, func_a, ops, func_b = None):
         if func_b == None:
@@ -208,7 +216,8 @@ class Parser:
 
         while self.cur_token.type in ops:
             op_tok = self.cur_token
-            res.register(self.forward())
+            res.register_advencement()
+            self.forward()
             right = res.register(func_b())
             if res.error: return res
             left = BinOpNode(left, op_tok, right)
@@ -222,20 +231,24 @@ class ParseResult:
     def __init__(self):
         self.error = None
         self.node = None
-    
-    def register(self, res):
-        if isinstance(res, ParseResult):
-            if res.error: self.error = res.error
-            return res.node
+        self.forward_count = 0
+
+    def register_advencement(self):
+        self.forward_count += 1
         
-        return res
-        
+
+    def register(self, res): 
+        self.forward_count += res.forward_count
+        if res.error: self.error = res.error
+        return res.node
+
     def success(self, node):
         self.node = node
         return self
 
     def failure(self, error):
-        self.error = error
+        if not self.error or self.forward_count == 0:
+            self.error = error
         return self
         
 
@@ -416,6 +429,12 @@ class Number:
         if isinstance(other, Number):
             return Number(self.value ** other.value).set_context(self.context), None
 
+    def copy(self):
+        copy = Number(self.value)
+        copy.set_pos(self.pos_start, self.pos_end)
+        copy.set_context(self.context)
+        return copy    
+
     def __repr__(self):
         return str(self.value)
 
@@ -446,9 +465,10 @@ class Interpreter():
 
         if not value:
             return res.failure(RTError(
-                f"!םואתפ המ ?המ{variable_name}?", node.pos_start, node.pos_end, context
+                f"!םואתפ המ ?המ ?'{variable_name}'", node.pos_start, node.pos_end, context
             ))
 
+        value = value.copy().set_pos(node.pos_start, node.pos_end)
         return res.success(value)
 
     def visit_VariableAssignmentNode(self, node, context):
