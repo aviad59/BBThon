@@ -6,7 +6,14 @@ LETTERS_AND_DIGITS = LETTERS + DIGITS
 
 # Keywords
 KEYWORDS = [
-    'שוחד'
+    'שוחד',
+    'וגם',
+    'או',
+    'לא',
+    'אם',
+    'אז',
+    'אחרם',
+    'אחרת',
 ]
 
 # Types
@@ -17,6 +24,14 @@ T_FLOAT = "FLOAT"
 T_IDENTIFIER = "IDENTIFIER"
 T_KEYWORD = "KEYWORD"
 T_EQ = "EQUALS"
+
+# Comparisons
+T_EE = "EQUALEQUAL"
+T_NE = "NEQUAL"
+T_LT = "LTHAN" 
+T_GT = "GTHAN"
+T_LTE = "LTEQUAL" 
+T_GTE = "GTEQUAL"
 
 # Operations
 T_PLUS = "PLUS"
