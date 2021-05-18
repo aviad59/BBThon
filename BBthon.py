@@ -1,3 +1,4 @@
+from os import error
 from constants import *
 from errors import *
 
@@ -64,14 +65,11 @@ class NumberNode:
 
     def __repr__(self):
         return f'{self.token}'
-
-
 class VariableAccessNode:
     def __init__(self, variable_name):
         self.variable_name = variable_name
         self.pos_start = self.variable_name.pos_start
         self.pos_end = self.variable_name.pos_end
-
 class VariableAssignmentNode:
     def __init__(self, variable_name, value):
         self.variable_name = variable_name 
@@ -79,7 +77,6 @@ class VariableAssignmentNode:
 
         self.pos_start = self.variable_name.pos_start
         self.pos_end = self.variable_name.pos_end
-
 class BinOpNode:
     def __init__(self, left_node, op_token, right_node):
         self.lNode = left_node
@@ -91,7 +88,6 @@ class BinOpNode:
 
     def __repr__(self):
         return f'({self.lNode}, {self.op_token}, {self.rNode})'
-
 class UnaryOpNode:
     def __init__(self, op_token, node):
         self.op_token = op_token
@@ -102,6 +98,13 @@ class UnaryOpNode:
 
     def __repr__(self):
         return f'({self.op_token}, {self.node})'
+class IFNode:
+    def __init__(self, cases, else_case):
+        self.cases = cases
+        self.else_case = else_case
+
+        self.pos_start = self.cases[0][0].pos_start
+        self.pos_end = (self.else_case or self.cases[len(self.cases) - 1][0]).pos_end
 
 ####################
 #      Parser      #
@@ -112,7 +115,7 @@ class Parser:
         self.tok_index = -1
         self.forward()
 
-    def forward(self):
+    def forward(self, ):
         self.tok_index += 1
         if self.tok_index < len(self.tokens):
             self.cur_token = self.tokens[self.tok_index]
@@ -121,7 +124,7 @@ class Parser:
     def parse(self):
         res = self.expression()
         if not res.error and self.cur_token.type != T_EOF:
-            return res.failure(InvalidSyntaxError("- + / * ) ( :ב שמתשת השקבב תיטמתמ הלועפ אל תאז", self.cur_token.pos_start, self.cur_token.pos_end))
+            return res.failure(InvalidSyntaxError("- + / * ) ( == > < >= <=:ב שמתשת השקבב הלועפ אל תאז", self.cur_token.pos_start, self.cur_token.pos_end))
         return res
 
     def atom(self):
@@ -129,27 +132,32 @@ class Parser:
         token = self.cur_token
 
         if token.type in (T_INT, T_FLOAT):
-            res.register_advencement()
+            res.register_forward()
             self.forward()
             return res.success(NumberNode(token))
         
         elif token.type == T_IDENTIFIER:
-            res.register_advencement()
+            res.register_forward()
             self.forward()
             return res.success(VariableAccessNode(token))
 
         elif token.type == T_LPAREN:
-            res.register_advencement()
+            res.register_forward()
             self.forward()
             expr = res.register(self.expression())
             if res.error: return res
             if self.cur_token.type == T_RPAREN:
-                res.register_advencement()
+                res.register_forward()
                 self.forward()
                 return res.success(expr)
             else:
                 return res.failure(InvalidSyntaxError("םיירגוס תריגסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
- 
+
+        elif token.match(T_KEYWORD, 'אם'):
+            if_expr = res.register(self.if_expression())
+            if res.error: return res
+            return res.success(if_expr)
+
         return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", token.pos_start, token.pos_end))
 
     def power(self):
@@ -160,7 +168,7 @@ class Parser:
         tok = self.cur_token
 
         if tok.type in (T_PLUS, T_MINUS):
-            res.register_advencement()
+            res.register_forward()
             self.forward()
             factor = res.register(self.factor())
             if res.error: return res
@@ -168,15 +176,85 @@ class Parser:
 
         return self.power()
  
+    def if_expression(self):
+        res = ParseResult()
+        cases = []
+        else_case = None
+
+        if not self.cur_token.match(T_KEYWORD, 'אם'):
+            return res.failure(InvalidSyntaxError("'םא' יאנתל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+
+        res.register_forward()
+        self.forward()
+
+        condition = res.register(self.expression())
+        if res.error: return res
+
+        if not self.cur_token.match(T_KEYWORD, 'אז'):
+            return res.failure(InvalidSyntaxError("'זא' יאנתל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+
+        res.register_forward()
+        self.forward()
+
+        expr = res.register(self.expression())
+        if res.error: return res
+        cases.append((condition, expr))
+
+        while self.cur_token.match(T_KEYWORD, 'אחם'):
+            res.register_forward()
+            self.forward()
+
+            condition = res.register(self.expression())
+            if res.error: return res
+
+            if not self.cur_token.match(T_KEYWORD, 'אז'):
+                return res.failure(InvalidSyntaxError("'זא' יאנתל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+
+            res.register_forward()
+            self.forward()
+
+            expr = res.register(self.expression())
+            if res.error: return res
+            cases.append((condition, expr))
+
+        if self.cur_token.match(T_KEYWORD, 'אחרת'):
+            res.register_forward()
+            self.forward()
+
+            else_case = res.register(self.expression())
+            if res.error: return res
+
+        return res.success(IFNode(cases, else_case))
 
     def term(self):
         return self.extract_op(self.factor, (T_MUL, T_DIV))
     
+    def comp_expression(self):
+        res = ParseResult()
+        if self.cur_token.match(T_KEYWORD, 'לא'):
+            op_tok = self.cur_token
+            res.register_forward()
+            self.forward()
+
+            node = res.register(self.comp_expression())
+            if res.error: return res
+            return res.success(UnaryOpNode(op_tok, node))
+
+        node = res.register(self.extract_op(self.arith_opertion, (T_EE, T_NE, T_LT, T_GT, T_LTE, T_GTE)))
+
+        if res.error:
+            return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'אל' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+
+        return res.success(node)
+
+    def arith_opertion(self):
+        return self.extract_op(self.term, (T_PLUS, T_MINUS))
+
     def expression(self):
         res = ParseResult()
 
         if self.cur_token.match(T_KEYWORD, 'שוחד'):
-            res.register_advencement()
+            res.register_forward()
             self.forward()
 
             if self.cur_token.type != T_IDENTIFIER:
@@ -185,7 +263,7 @@ class Parser:
                 ))
 
             variable_name = self.cur_token
-            res.register_advencement()
+            res.register_forward()
             self.forward()
 
             if self.cur_token.type != T_EQ:
@@ -193,13 +271,13 @@ class Parser:
                     "הנ הנ הנ הנו הקפ הקפ יתלביק ךא '=' ןמיסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
                 ))
 
-            res.register_advencement()
+            res.register_forward()
             self.forward()
             expression = res.register(self.expression())
             if res.error: return res
             return res.success(VariableAssignmentNode(variable_name, expression))
 
-        node = res.register(self.extract_op(self.term, (T_PLUS, T_MINUS)))
+        node = res.register(self.extract_op(self.comp_expression, ((T_KEYWORD, "וגם"), (T_KEYWORD, "או"))))
         if res.error: 
             res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'דחוש' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
 
@@ -212,11 +290,12 @@ class Parser:
         res = ParseResult()
         left = res.register(func_a())
         
-        if res.error: return res
+        if res.error: 
+            return res
 
-        while self.cur_token.type in ops:
+        while self.cur_token.type in ops or (self.cur_token.type, self.cur_token.value) in ops:
             op_tok = self.cur_token
-            res.register_advencement()
+            res.register_forward()
             self.forward()
             right = res.register(func_b())
             if res.error: return res
@@ -233,9 +312,8 @@ class ParseResult:
         self.node = None
         self.forward_count = 0
 
-    def register_advencement(self):
-        self.forward_count += 1
-        
+    def register_forward(self):
+        self.forward_count += 1      
 
     def register(self, res): 
         self.forward_count += res.forward_count
@@ -339,15 +417,22 @@ class Lexer:
             elif self.curChar == '^':
                 tokens.append(Token(T_POW, pos_start=self.pos))
                 self.forward() 
-            elif self.curChar == '=':
-                tokens.append(Token(T_EQ, pos_start=self.pos))
-                self.forward() 
             elif self.curChar == '(':
                 tokens.append(Token(T_LPAREN, pos_start=self.pos))
                 self.forward() 
             elif self.curChar == ')':
                 tokens.append(Token(T_RPAREN, pos_start=self.pos))
                 self.forward() 
+            elif self.curChar == '!':
+                tok, error = self.create_not_equal()
+                if error: return [], error
+                tokens.append(tok) 
+            elif self.curChar == '=':
+                tokens.append(self.create_equals())
+            elif self.curChar == '<':
+                tokens.append(self.create_less_than())
+            elif self.curChar == '>':
+                tokens.append(self.create_greater_than())
             else:
                 pos_start = self.pos.copy()
                 char = self.curChar
@@ -356,7 +441,6 @@ class Lexer:
 
         tokens.append(Token(T_EOF, pos_start=self.pos))
         return tokens, None
-
 
     def create_identifier(self):  
         id_str = ''
@@ -388,6 +472,51 @@ class Lexer:
         else:
             return Token(T_FLOAT, float(num_str), pos_start, self.pos)
 
+    def create_not_equal(self):
+        pos_start = self.pos.copy()
+        self.forward()
+
+        if self.curChar == "=":
+            self.forward()
+            return Token(T_NE, pos_start=pos_start, pos_end=self.pos), None
+
+        self.forward()
+        return None, ExpectedCharError("ירחא '=' ותל יתיפיצ '!' ", pos_start, self.pos)
+
+    def create_equals(self):
+        token_type = T_EQ
+        pos_start = self.pos.copy()
+        self.forward() 
+
+        if self.curChar == '=':
+            self.forward()
+            token_type = T_EE
+
+        return Token(token_type, pos_start=pos_start, pos_end=self.pos)
+
+    def create_less_than(self):
+        token_type = T_LT
+        pos_start = self.pos.copy()
+        self.forward() 
+
+        if self.curChar == '=':
+            self.forward()
+            token_type == T_LTE
+
+        return Token(token_type, pos_start=pos_start, pos_end=self.pos)
+
+    def create_greater_than(self):
+        token_type = T_GT
+        pos_start = self.pos.copy()
+        self.forward() 
+
+        if self.curChar == '=':
+            self.forward()
+            token_type == T_GTE
+
+        return Token(token_type, pos_start=pos_start, pos_end=self.pos)
+
+    
 ######################
 #       Values       #
 ######################
@@ -428,12 +557,50 @@ class Number:
     def powered_by(self, other):
         if isinstance(other, Number):
             return Number(self.value ** other.value).set_context(self.context), None
+    
+    def get_comparison_eq(self, other):
+	    if isinstance(other, Number):
+		    return Number(int(self.value == other.value)).set_context(self.context), None
+
+    def get_comparison_ne(self, other):
+	    if isinstance(other, Number):
+    		return Number(int(self.value != other.value)).set_context(self.context), None
+
+    def get_comparison_lt(self, other):
+    	if isinstance(other, Number):
+    		return Number(int(self.value < other.value)).set_context(self.context), None
+
+    def get_comparison_gt(self, other):
+    	if isinstance(other, Number):
+    		return Number(int(self.value > other.value)).set_context(self.context), None
+
+    def get_comparison_lte(self, other):
+    	if isinstance(other, Number):
+    		return Number(int(self.value <= other.value)).set_context(self.context), None
+
+    def get_comparison_gte(self, other):
+    	if isinstance(other, Number):
+    		return Number(int(self.value >= other.value)).set_context(self.context), None
+
+    def anded_by(self, other):
+    	if isinstance(other, Number):
+    		return Number(int(self.value and other.value)).set_context(self.context), None
+
+    def ored_by(self, other):
+    	if isinstance(other, Number):
+    		return Number(int(self.value or other.value)).set_context(self.context), None
+
+    def notted(self):
+    	return Number(1 if self.value == 0 else 0).set_context(self.context), None
 
     def copy(self):
         copy = Number(self.value)
         copy.set_pos(self.pos_start, self.pos_end)
         copy.set_context(self.context)
         return copy    
+
+    def is_true(self):
+        return self.value != 0
 
     def __repr__(self):
         return str(self.value)
@@ -479,7 +646,6 @@ class Interpreter():
         context.SymbolTable.SetValue(variable_name, value)
         return res.success(value)
 
-
     def visit_BinOpNode(self, node, context):
         res = RTResult()
         left = res.register(self.visit(node.lNode, context))
@@ -498,6 +664,22 @@ class Interpreter():
             result, error = left.divided_by(right)
         elif node.op_token.type == T_POW:
             result, error = left.powered_by(right)
+        elif node.op_token.type == T_EE:
+    	    result, error = left.get_comparison_eq(right)
+        elif node.op_token.type == T_NE:
+        	result, error = left.get_comparison_ne(right)
+        elif node.op_token.type == T_LT:
+        	result, error = left.get_comparison_lt(right)
+        elif node.op_token.type == T_GT:
+        	result, error = left.get_comparison_gt(right)
+        elif node.op_token.type == T_LTE:
+        	result, error = left.get_comparison_lte(right)
+        elif node.op_token.type == T_GTE:
+        	result, error = left.get_comparison_gte(right)
+        elif node.op_token.match(T_KEYWORD, 'וגם'):
+        	result, error = left.anded_by(right)
+        elif node.op_token.match(T_KEYWORD, 'או'):
+        	result, error = left.ored_by(right)
 
         if error:
             return res.failure(error)
@@ -513,18 +695,41 @@ class Interpreter():
 
         if node.op_token.type == T_MINUS:
             number, Error = number.multiplyed_by(Number(-1))
-
+        elif node.op_token.match(T_KEYWORD, 'לא'):
+            number, error = number.notted()
+        
         if error: 
             res.failure(error)
         else:
             return res.success(number.set_pos(node.pos_start, node.pos_end))
+
+    def visit_IFNode(self, node , context):
+        res = RTResult()
+
+        for condition, expr in node.cases:
+            condition_value = res.register(self.visit(condition, context))
+            if res.error: return res
+             
+            if condition_value.is_true():
+                expr_value = res.register(self.visit(expr, context))
+                if res.error: return res
+                return res.success(expr_value)
+
+            if node.else_case:
+                else_value = res.register(self.visit(node.else_case, context))
+                if res.error: return res 
+                return res.success(else_value)
+
+            return res.success(None)
 
 ########################
 #         Run          #
 ########################
 
 global_symbols_table = SymbolTable()
-global_symbols_table.SetValue('null', Number(0))
+global_symbols_table.SetValue('כלום', Number(0))
+global_symbols_table.SetValue('ליכוד', Number(1))
+global_symbols_table.SetValue('מרצ', Number(0))
 
 def run(file_name, text):
 

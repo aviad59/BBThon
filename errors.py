@@ -16,6 +16,9 @@ class IllegalCharError(Error):
 class InvalidSyntaxError(Error):
     def __init__(self, details, pos_start, pos_end):
         super().__init__("הזה חוסינה תא ןיבמ אל ינא יכ ,רפסה תיבל רוזחתש יאדכ דיפל", details, pos_start, pos_end)
+class ExpectedCharError(Error):
+    def __init__(self, details, pos_start, pos_end):
+        super().__init__("םינכומ אל ונספתנ ירעצל ,םירקי םיחרזא", details, pos_start, pos_end)
 
 class RTError(Error):
     def __init__(self, details, pos_start, pos_end, context):
@@ -39,3 +42,4 @@ class RTError(Error):
         res += f'{self.error_title}\n'
         res += f'{self.details}\n'
         return res
+

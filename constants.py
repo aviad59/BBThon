@@ -6,28 +6,43 @@ LETTERS_AND_DIGITS = LETTERS + DIGITS
 
 # Keywords
 KEYWORDS = [
-    'שוחד'
+    'שוחד',
+    'וגם',
+    'או',
+    'לא',
+    'אם',
+    'אז',
+    'אחם',
+    'אחרת',
 ]
 
 # Types
-T_INT = "INT"
-T_FLOAT = "FLOAT"
+T_INT                   = "INT"
+T_FLOAT                 = "FLOAT"
 
 # Variables
-T_IDENTIFIER = "IDENTIFIER"
-T_KEYWORD = "KEYWORD"
-T_EQ = "EQUALS"
+T_IDENTIFIER            = "IDENTIFIER"
+T_KEYWORD               = "KEYWORD"
+T_EQ                    = "EQUALS"
+
+# Comparisons
+T_EE                   = 'EE'
+T_NE					= 'NE'
+T_LT					= 'LT'
+T_GT					= 'GT'
+T_LTE				    = 'LTE'
+T_GTE				    = 'GTE'
 
 # Operations
-T_PLUS = "PLUS"
-T_MINUS = "MINUS"
-T_MUL = "MUL"
-T_DIV = "DIV"
+T_PLUS                  = "PLUS"
+T_MINUS                 = "MINUS"
+T_MUL                   = "MUL"
+T_DIV                   = "DIV"
 
-T_POW = "POW"
+T_POW                   = "POW"
 
-T_LPAREN = "LPAREN"
-T_RPAREN = "RPAREN"
+T_LPAREN                = "LPAREN"
+T_RPAREN                = "RPAREN"
 
 # Misc
-T_EOF = "EOF"
+T_EOF                   = "EOF"
