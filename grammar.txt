@@ -1,11 +1,36 @@
-expr    : term ((PLUS|MINUS) term)*
+expr				: KEYWORD:VAR IDENTIFIER EQ expr
+						: comp-expr ((KEYWORD:וגם|KEYWORD:או) comp-expr)*
 
-term    : factor ((MUL|DIV) factor)*
+comp-expr			: NOT comp-expr
+						: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
 
-factor	: (PLUS|MINUS) factor
-		: power
+arith-expr			:	term ((PLUS|MINUS) term)*
 
-power		: atom (POW factor)*
+term				: factor ((MUL|DIV) factor)*
 
-atom 		: INT|FLOAT
-		    : LPAREN expr RPAREN
+factor				: (PLUS|MINUS) factor
+						: power
+
+power				: call (POW factor)*
+
+call				: atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
+
+atom 				: INT|FLOAT|IDENTIFIER
+						: LPAREN expr RPAREN
+						: if-expr
+						: for-expr
+						: while-expr
+						: func-def
+
+if-expr				: KEYWORD:אם expr KEYWORD:אז expr
+						(KEYWORD:אחרם expr KEYWORD:אז expr)*
+						(KEYWORD:אחרת expr)?
+
+for-expr			: KEYWORD:בשביל IDENTIFIER EQ expr KEYWORD:עד expr 
+						(KEYWORD:קפוץ expr)? KEYWORD:אז expr
+
+while-expr			: KEYWORD:כלעוד expr KEYWORD:אז expr
+
+func-def			: KEYWORD:מוחמדף IDENTIFIER?
+						LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
+						ARROW expr

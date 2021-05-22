@@ -4,6 +4,7 @@
 class NumberNode:
     def __init__(self, tok):
         self.token = tok
+
         self.pos_start = self.token.pos_start
         self.pos_end = self.token.pos_end
 
@@ -49,3 +50,46 @@ class IFNode:
 
         self.pos_start = self.cases[0][0].pos_start
         self.pos_end = (self.else_case or self.cases[len(self.cases) - 1][0]).pos_end
+class ForNode:
+    def __init__(self, variable_name_token, start_value, end_value, step_value, body_node):
+        self.variable_name_token = variable_name_token
+        self.start_value = start_value
+        self.end_value = end_value
+        self.step_value = step_value
+        self.body_node = body_node
+        
+        self.pos_start = self.variable_name_token.pos_start
+        self.pos_end = self.body_node.pos_end
+class WhileNode:
+    def __init__(self, condition_node, body_node):
+        self.condition_node = condition_node
+        self.body_node = body_node
+
+        self.pos_start = self.condition_node.pos_start
+        self.pos_end = self.body_node.pos_end
+class FunctionNode:
+    def __init__(self, variable_name_token, arg_name_tokens, body_node):
+        self.var_name_tok = variable_name_token
+        self.arg_name_toks = arg_name_tokens
+        self.body_node = body_node
+
+        if self.var_name_tok:
+            self.pos_start = self.var_name_tok.pos_start
+        elif len(self.arg_name_toks) > 0:
+            self.pos_start = self.arg_name_toks[0].pos_start
+        else:
+            self.pos_start = self.body_node.pos_start
+
+        self.pos_end = self.body_node.pos_end
+class CallFuncNode:
+    def __init__(self, node_to_call, arg_nodes):
+        self.node_to_call = node_to_call
+        self.arg_node = arg_nodes
+
+        self.pos_start = self.node_to_call.pos_start
+
+        if len(self.arg_node) > 0:
+            self.pos_end = self.arg_node[len(self.arg_node) - 1].pos_end
+        else:
+            self.pos_end = self.node_to_call.pos_end
+

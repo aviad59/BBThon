@@ -2,41 +2,7 @@ from Parser import *
 from constants import *
 from errors import *
 from Interpreter import *
-
-#######################
-#     Symbol Table    #
-#######################
-class SymbolTable:
-    def __init__(self):
-        self.local_symbols_dict = {}  
-        self.global_symbols_dict = None
-
-    def GetValue(self, name):
-        value = self.local_symbols_dict.get(name, None)
-        if value == None and self.global_symbols_dict:
-           value = self.global_symbols_dict.get(name) 
-        return value
-
-    def SetValue(self, name, value):
-        self.local_symbols_dict[name] = value
-
-    def remove(self, name):
-        del self.local_symbols_dict[name]
-
-
-#######################
-#       Context       #
-#######################
-
-class Context:
-    def __init__(self, dis_name, parent=None, parent_position=None):
-        self.dis_name = dis_name
-        self.parent = parent
-        self.parent_position = parent_position
-        self.SymbolTable = None
-
-        
-
+  
 ######################
 #      Position      #
 ######################
@@ -113,8 +79,7 @@ class Lexer:
                 tokens.append(Token(T_PLUS, pos_start=self.pos))
                 self.forward()
             elif self.curChar == '-':
-                tokens.append(Token(T_MINUS, pos_start=self.pos))
-                self.forward()
+                tokens.append(self.create_minus_or_arrow())
             elif self.curChar == '*':
                 tokens.append(Token(T_MUL, pos_start=self.pos))
                 self.forward()
@@ -140,6 +105,9 @@ class Lexer:
                 tokens.append(self.create_less_than())
             elif self.curChar == '>':
                 tokens.append(self.create_greater_than())
+            elif self.curChar == ',':
+                tokens.append(Token(T_COMMA, pos_start=self.pos))
+                self.forward() 
             else:
                 pos_start = self.pos.copy()
                 char = self.curChar
@@ -148,6 +116,17 @@ class Lexer:
 
         tokens.append(Token(T_EOF, pos_start=self.pos))
         return tokens, None
+
+    def create_minus_or_arrow(self):
+        tok_type = T_MINUS
+        pos_start = self.pos.copy()
+        self.forward()
+
+        if self.curChar == ">":
+            self.forward()
+            tok_type = T_POINTER
+        
+        return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 
     def create_identifier(self):  
         id_str = ''
@@ -222,10 +201,6 @@ class Lexer:
             token_type == T_GTE
 
         return Token(token_type, pos_start=pos_start, pos_end=self.pos)
-
-    
-
-
 
 ########################
 #         Run          #

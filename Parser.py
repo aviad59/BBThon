@@ -23,6 +23,46 @@ class Parser:
             return res.failure(InvalidSyntaxError("- + / * ) ( == > < >= <=:ב שמתשת השקבב הלועפ אל תאז", self.cur_token.pos_start, self.cur_token.pos_end))
         return res
 
+    def call(self):
+        res = ParseResult()
+        atom = res.register(self.atom())
+        
+        if res.error: return res
+        
+        if self.cur_token.type == T_LPAREN:
+            res.register_forward()
+            self.forward()
+            
+            arg_nodes = []
+            
+            if self.cur_token.type == T_RPAREN:
+                res.register_forward()
+                self.forward()
+            else:
+                arg_nodes.append(res.register(self.expression()))
+                if res.error: 
+                    return res.failure(InvalidSyntaxError(
+                        '"אל" וא ")" "-", "+", ,ההזמ ,רפסמ ,"ףדמחומ" ,"דועלכ" ,"ליבשב" ,"םא" ,"דחוש" ,")"-ל יתיפיצ',
+                        self.cur_token.pos_start,
+                        self.cur_token.pos_end
+                    ))
+                
+                while self.cur_token.type == T_COMMA:
+                     res.register_forward()
+                     self.forward()
+                     
+                     arg_nodes.append(res.register(self.expression()))   
+                     if res.error: return res
+
+                if self.cur_token.type != T_RPAREN:
+                    return res.failure(InvalidSyntaxError('"("-ל וא ","-ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+                res.register_forward()
+                self.forward()
+                
+            return res.success(CallFuncNode(atom, arg_nodes))
+        return res.success(atom)
+        
     def atom(self):
         res = ParseResult()
         token = self.cur_token
@@ -54,10 +94,25 @@ class Parser:
             if res.error: return res
             return res.success(if_expr)
 
-        return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", token.pos_start, token.pos_end))
+        elif token.match(T_KEYWORD, 'בשביל'):
+            for_expr = res.register(self.for_expression())
+            if res.error: return res
+            return res.success(for_expr)               
+
+        elif token.match(T_KEYWORD, 'כלעוד'):
+            while_expr = res.register(self.while_expression())
+            if res.error: return res
+            return res.success(while_expr)
+        
+        elif token.match(T_KEYWORD, 'מוחמדף'):
+            func_def = res.register(self.func_def())
+            if res.error: return res
+            return res.success(func_def) 
+
+        return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'ףדמחומ' ,'דועלכ' ,'ליבשב' ,'םא' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", token.pos_start, token.pos_end))
 
     def power(self):
-        return self.extract_op(self.atom, (T_POW, ), self.factor)
+        return self.extract_op(self.call, (T_POW, ), self.factor)
 
     def factor(self):
         res = ParseResult()
@@ -96,7 +151,7 @@ class Parser:
         if res.error: return res
         cases.append((condition, expr))
 
-        while self.cur_token.match(T_KEYWORD, 'אחם'):
+        while self.cur_token.match(T_KEYWORD, 'אחרם'):
             res.register_forward()
             self.forward()
 
@@ -122,6 +177,151 @@ class Parser:
 
         return res.success(IFNode(cases, else_case))
 
+    def for_expression(self):
+        res = ParseResult()
+
+        if not self.cur_token.match(T_KEYWORD, 'בשביל'):
+            return res.failure(InvalidSyntaxError('"ליבשב"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+        
+        res.register_forward()
+        self.forward()
+
+        if self.cur_token.type != T_IDENTIFIER:
+            return res.failure(InvalidSyntaxError("ההזמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+
+        variable_name = self.cur_token
+        res.register_forward()
+        self.forward()
+
+        if self.cur_token.type != T_EQ:
+            return res.failure(InvalidSyntaxError('"="ציפיתי ל'))
+
+        res.register_forward()
+        self.forward()
+
+        start_value = res.register(self.expression())
+        if res.error: return res
+
+        if not self.cur_token.match(T_KEYWORD, 'עד'):
+            return res.failure(InvalidSyntaxError('"דע"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+        
+        res.register_forward()
+        self.forward()
+
+        end_value = res.register(self.expression())
+        if res.error: return res
+
+        if self.cur_token.match(T_KEYWORD, 'קפוץ'):
+            res.register_forward()
+            self.forward()
+
+            step_value = res.register(self.expression())
+            if res.error: return res
+        else:
+            step_value = None
+
+        if not self.cur_token.match(T_KEYWORD, 'אז'):
+            return res.failure(InvalidSyntaxError('"זא"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+        res.register_forward()
+        self.forward()
+
+        body = res.register(self.expression())
+        if res.error: return res
+
+        return res.success(ForNode(variable_name, start_value, end_value, step_value, body))
+
+    def while_expression(self):
+        res = ParseResult()
+
+        if not self.cur_token.match(T_KEYWORD, 'כלעוד'):
+            return res.failure(InvalidSyntaxError('"דועלכ"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+        res.register_forward()
+        self.forward()
+
+        condition = res.register(self.expression())
+        if res.error: return res
+
+        if not self.cur_token.match(T_KEYWORD, "אז"):
+            return res.failure(InvalidSyntaxError('"זא"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+        res.register_forward()
+        self.forward()
+
+        body = res.register(self.expression())
+        if res.error: return res
+
+        return res.success(WhileNode(condition, body))
+
+    def func_def(self):
+        res = ParseResult()
+        
+        if not self.cur_token.match(T_KEYWORD, 'מוחמדף'):
+            return res.failure(InvalidSyntaxError('"ףדמחומ"-ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+        res.register_forward()
+        self.forward()
+        
+        if self.cur_token.type == T_IDENTIFIER:
+            var_name_tok = self.cur_token
+            res.register_forward()
+            self.forward()
+            
+            if self.cur_token.type != T_LPAREN:
+                return res.failure(InvalidSyntaxError('")"-ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+        else:
+            var_name_tok = None
+            if self.cur_token.type != T_LPAREN:
+                return res.failure(InvalidSyntaxError('")"-ל וא ההזמל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+        
+        res.register_forward()
+        self.forward()
+        
+        arg_name_toks = []
+        
+        if self.cur_token.type == T_IDENTIFIER:
+            arg_name_toks.append(self.cur_token)
+            res.register_forward()
+            self.forward()
+            
+            while self.cur_token.type == T_COMMA:
+                res.register_forward()
+                self.forward()
+                
+                if self.cur_token.type != T_IDENTIFIER:
+                    return res.failure(InvalidSyntaxError('ההזמל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+                    res.register_forward()
+                    self.forward()
+        
+                arg_name_toks.append(self.cur_token)
+                res.register_forward()
+                self.forward()
+             
+            if self.cur_token.type != T_RPAREN:
+                return res.failure(InvalidSyntaxError('"("-ל וא ","-ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+        else:
+             if self.cur_token.type != T_RPAREN:
+                return res.failure(InvalidSyntaxError('"("-ל וא ההזמל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+         
+        res.register_forward()
+        self.forward() 
+        
+        if self.cur_token.type != T_POINTER:
+            return res.failure(InvalidSyntaxError('"-<"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+        
+        res.register_forward()
+        self.forward()       
+        
+        node_to_return = res.register(self.expression())
+        if res.error: return res
+        
+        return res.success(FunctionNode(
+            var_name_tok,
+            arg_name_toks,
+            node_to_return
+        ))
+                
     def term(self):
         return self.extract_op(self.factor, (T_MUL, T_DIV))
     
@@ -175,7 +375,7 @@ class Parser:
 
         node = res.register(self.extract_op(self.comp_expression, ((T_KEYWORD, "וגם"), (T_KEYWORD, "או"))))
         if res.error: 
-            res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'דחוש' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+            res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'דחוש' ,'םא' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
 
         return res.success(node)
 
