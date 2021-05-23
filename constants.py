@@ -24,6 +24,7 @@ KEYWORDS = [
 # Types
 T_INT         = "INT"
 T_FLOAT       = "FLOAT"
+T_STRING      = "STRING"
 
 # Variables
 T_IDENTIFIER  = "IDENTIFIER"

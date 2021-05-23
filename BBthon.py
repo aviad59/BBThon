@@ -75,6 +75,8 @@ class Lexer:
                 tokens.append(self.create_number())
             elif self.curChar in LETTERS:
                 tokens.append(self.create_identifier())
+            elif self.curChar == '"':
+                tokens.append(self.create_string())
             elif self.curChar == '+':
                 tokens.append(Token(T_PLUS, pos_start=self.pos))
                 self.forward()
@@ -116,6 +118,33 @@ class Lexer:
 
         tokens.append(Token(T_EOF, pos_start=self.pos))
         return tokens, None
+
+    def create_string(self):
+        string = ''
+        pos_start = self.pos.copy()
+        escape_character = False 
+        self.forward()
+
+        escape_characters = {
+            'n': '\n',
+            't': '\t',
+            'ב': 'ךלמה יביב',
+            'ע': 'הרואמהמ אצ זר יליע'
+        }
+
+        while self.curChar != None and (self.curChar != '"' or escape_character):
+            if escape_character:
+                string += escape_characters.get(self.curChar, self.curChar)
+                escape_character = False
+            else:
+                if self.curChar == '\\':
+                    escape_character = True
+                else:
+                    string += self.curChar
+            self.forward()
+
+        self.forward()
+        return Token(T_STRING, string, pos_start, self.pos) 
 
     def create_minus_or_arrow(self):
         tok_type = T_MINUS

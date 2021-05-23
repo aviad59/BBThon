@@ -189,6 +189,11 @@ class Interpreter:
 
         return res.success(return_value)
 
+    def visit_StringNode(self, node, context):
+        return RTResult().success(
+            String(node.token.value).set_context(context).set_pos(node.pos_start, node.pos_end)
+        )
+        
 #######################
 #     Symbol Table    #
 #######################
@@ -243,6 +248,7 @@ class RTResult:
 #       Values       #
 ######################
 class Value:
+
     def __init__(self):
         self.set_pos()
         self.set_context()
@@ -307,6 +313,7 @@ class Value:
     def illegal_operation(self, other=None):
         if not other: other = self
         return RTError("(תרחא חכוה אל דוע לכ הרואכל) תיקוח אל הלועפ", self.pos_start, other.pos_end, self.context)
+
 class Number(Value):
     def __init__(self, value):
         self.value = value
@@ -414,6 +421,36 @@ class Number(Value):
 
     def __repr__(self):
         return str(self.value)
+
+class String(Value):
+    def __init__(self, value):
+        super().__init__()    
+        self.value = value
+    
+    def added_to(self, other):
+        if isinstance(other, String):
+            return String(self.value + other.value).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def multiplyed_by(self, other):
+        if isinstance(other, Number):
+            return String(self.value * other.value).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def is_true(self):
+        return len(self.value) > 0
+
+    def copy(self):
+        copy = String(self.value)
+        copy.set_pos(self.pos_start, self.pos_end)
+        copy.set_context(self.context)
+        return copy
+
+    def __repr__(self):
+        return f'"{self.value}"'
+
 class Function(Value):
     def __init__(self, name, body_node, arg_names):
         super().__init__()

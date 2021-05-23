@@ -72,6 +72,11 @@ class Parser:
             self.forward()
             return res.success(NumberNode(token))
         
+        elif token.type == T_STRING:
+            res.register_forward()
+            self.forward()
+            return res.success(StringNode(token))
+
         elif token.type == T_IDENTIFIER:
             res.register_forward()
             self.forward()
