@@ -23,6 +23,101 @@ class Parser:
             return res.failure(InvalidSyntaxError("- + / * ) ( == > < >= <=:ב שמתשת השקבב הלועפ אל תאז", self.cur_token.pos_start, self.cur_token.pos_end))
         return res
 
+    def extract_op(self, func_a, ops, func_b = None):
+        if func_b == None:
+            func_b = func_a
+            
+        res = ParseResult()
+        left = res.register(func_a())
+        
+        if res.error: 
+            return res
+
+        while self.cur_token.type in ops or (self.cur_token.type, self.cur_token.value) in ops:
+            op_tok = self.cur_token
+            res.register_forward()
+            self.forward()
+            right = res.register(func_b())
+            if res.error: return res
+            left = BinOpNode(left, op_tok, right)
+
+        return res.success(left)
+
+    def expression(self):
+        res = ParseResult()
+
+        if self.cur_token.match(T_KEYWORD, 'שוחד'):
+            res.register_forward()
+            self.forward()
+
+            if self.cur_token.type != T_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(
+                    "הנ הנ הנ הנו הקפ הקפ יתלביק ךא ההזמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
+                ))
+
+            variable_name = self.cur_token
+            res.register_forward()
+            self.forward()
+
+            if self.cur_token.type != T_EQ:
+                return res.failure(InvalidSyntaxError(
+                    "הנ הנ הנ הנו הקפ הקפ יתלביק ךא '=' ןמיסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
+                ))
+
+            res.register_forward()
+            self.forward()
+            expression = res.register(self.expression())
+            if res.error: return res
+            return res.success(VariableAssignmentNode(variable_name, expression))
+
+        node = res.register(self.extract_op(self.comp_expression, ((T_KEYWORD, "וגם"), (T_KEYWORD, "או"))))
+        if res.error: 
+            res.failure(InvalidSyntaxError(
+                '"אל" וא "]", ")", "-", "+", ,"ףדמחומ" ,"דועלכ" ,"ליבשב" ,"םא" ,"דחוש" ,ההזמ ,רפסמל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end
+                ))
+
+        return res.success(node)
+    
+    def comp_expression(self):
+        res = ParseResult()
+        if self.cur_token.match(T_KEYWORD, 'לא'):
+            op_tok = self.cur_token
+            res.register_forward()
+            self.forward()
+
+            node = res.register(self.comp_expression())
+            if res.error: return res
+            return res.success(UnaryOpNode(op_tok, node))
+
+        node = res.register(self.extract_op(self.arith_opertion, (T_EE, T_NE, T_LT, T_GT, T_LTE, T_GTE)))
+
+        if res.error:
+            return res.failure(InvalidSyntaxError('"אל" וא "]", ")", "-", "+", ,"ףדמחומ" ,"דועלכ" ,"ליבשב" ,"םא" ,ההזמ ,רפסמל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+        return res.success(node)
+
+    def arith_opertion(self):
+        return self.extract_op(self.term, (T_PLUS, T_MINUS))
+    
+    def term(self):
+        return self.extract_op(self.factor, (T_MUL, T_DIV, T_DOLLAR))
+    
+    def factor(self):
+        res = ParseResult()
+        tok = self.cur_token
+
+        if tok.type in (T_PLUS, T_MINUS):
+            res.register_forward()
+            self.forward()
+            factor = res.register(self.factor())
+            if res.error: return res
+            return res.success(UnaryOpNode(tok, factor))
+
+        return self.power()
+    
+    def power(self):
+        return self.extract_op(self.call, (T_POW, ), self.factor)
+    
     def call(self):
         res = ParseResult()
         atom = res.register(self.atom())
@@ -42,7 +137,7 @@ class Parser:
                 arg_nodes.append(res.register(self.expression()))
                 if res.error: 
                     return res.failure(InvalidSyntaxError(
-                        '"אל" וא ")" "-", "+", ,ההזמ ,רפסמ ,"ףדמחומ" ,"דועלכ" ,"ליבשב" ,"םא" ,"דחוש" ,")"-ל יתיפיצ',
+                        '"אל" וא "]" ")", "(", "-", "+",  ,"ףדמחומ" ,"דועלכ" ,"ליבשב" ,"םא" ,"דחוש" ,ההזמ ,רפסמל יתיפיצ',
                         self.cur_token.pos_start,
                         self.cur_token.pos_end
                     ))
@@ -93,7 +188,12 @@ class Parser:
                 return res.success(expr)
             else:
                 return res.failure(InvalidSyntaxError("םיירגוס תריגסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
-
+        
+        elif token.type == T_LSQUARE:
+            list_expression = res.register(self.list_expression())
+            if res.error: return res
+            return res.success(list_expression)
+        
         elif token.match(T_KEYWORD, 'אם'):
             if_expr = res.register(self.if_expression())
             if res.error: return res
@@ -114,24 +214,50 @@ class Parser:
             if res.error: return res
             return res.success(func_def) 
 
-        return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'ףדמחומ' ,'דועלכ' ,'ליבשב' ,'םא' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", token.pos_start, token.pos_end))
+        return res.failure(InvalidSyntaxError('"ףדמחומ" וא "דועלכ" ,"ליבשב" ,"םא" "]", ")", "-", "+", ,ההזמ ,רפסמל יתיפיצ', token.pos_start, token.pos_end))
 
-    def power(self):
-        return self.extract_op(self.call, (T_POW, ), self.factor)
-
-    def factor(self):
+    def list_expression(self):
         res = ParseResult()
-        tok = self.cur_token
-
-        if tok.type in (T_PLUS, T_MINUS):
+        element_nodes = []
+        pos_start = self.cur_token.pos_start.copy()
+        
+        if self.cur_token.type != T_LSQUARE:
+            return res.failure(InvalidSyntaxError('"]"-ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+    
+        res.register_forward()
+        self.forward()
+        
+        if self.cur_token.type == T_RSQUARE:
             res.register_forward()
             self.forward()
-            factor = res.register(self.factor())
-            if res.error: return res
-            return res.success(UnaryOpNode(tok, factor))
+        else:
+            element_nodes.append(res.register(self.expression()))
+            if res.error: 
+                return res.failure(InvalidSyntaxError(
+                    '"אל" וא ")" "]", "[", "-", "+",  ,"ףדמחומ" ,"דועלכ" ,"ליבשב" ,"םא" ,"דחוש" ,ההזמ ,רפסמל יתיפיצ',
+                    self.cur_token.pos_start,
+                    self.cur_token.pos_end
+                 ))
+                
+            while self.cur_token.type == T_COMMA:
+                res.register_forward()
+                self.forward()
+                         
+                element_nodes.append(res.register(self.expression()))   
+                if res.error: return res
 
-        return self.power()
- 
+            if self.cur_token.type != T_RSQUARE:
+                return res.failure(InvalidSyntaxError('"["-ל וא ","-ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+            res.register_forward()
+            self.forward()
+    
+        return res.success(ListNode(
+            element_nodes,
+            pos_start,
+            self.cur_token.pos_end.copy()
+        ))
+    
     def if_expression(self):
         res = ParseResult()
         cases = []
@@ -327,83 +453,6 @@ class Parser:
             node_to_return
         ))
                 
-    def term(self):
-        return self.extract_op(self.factor, (T_MUL, T_DIV))
-    
-    def comp_expression(self):
-        res = ParseResult()
-        if self.cur_token.match(T_KEYWORD, 'לא'):
-            op_tok = self.cur_token
-            res.register_forward()
-            self.forward()
-
-            node = res.register(self.comp_expression())
-            if res.error: return res
-            return res.success(UnaryOpNode(op_tok, node))
-
-        node = res.register(self.extract_op(self.arith_opertion, (T_EE, T_NE, T_LT, T_GT, T_LTE, T_GTE)))
-
-        if res.error:
-            return res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'אל' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
-
-        return res.success(node)
-
-    def arith_opertion(self):
-        return self.extract_op(self.term, (T_PLUS, T_MINUS))
-
-    def expression(self):
-        res = ParseResult()
-
-        if self.cur_token.match(T_KEYWORD, 'שוחד'):
-            res.register_forward()
-            self.forward()
-
-            if self.cur_token.type != T_IDENTIFIER:
-                return res.failure(InvalidSyntaxError(
-                    "הנ הנ הנ הנו הקפ הקפ יתלביק ךא ההזמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
-                ))
-
-            variable_name = self.cur_token
-            res.register_forward()
-            self.forward()
-
-            if self.cur_token.type != T_EQ:
-                return res.failure(InvalidSyntaxError(
-                    "הנ הנ הנ הנו הקפ הקפ יתלביק ךא '=' ןמיסל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end
-                ))
-
-            res.register_forward()
-            self.forward()
-            expression = res.register(self.expression())
-            if res.error: return res
-            return res.success(VariableAssignmentNode(variable_name, expression))
-
-        node = res.register(self.extract_op(self.comp_expression, ((T_KEYWORD, "וגם"), (T_KEYWORD, "או"))))
-        if res.error: 
-            res.failure(InvalidSyntaxError("םיירגוס תחיתפ וא 'דחוש' ,'םא' ,ההזמ ,סונימ ,סולפ ,רפסמל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
-
-        return res.success(node)
-
-    def extract_op(self, func_a, ops, func_b = None):
-        if func_b == None:
-            func_b = func_a
-            
-        res = ParseResult()
-        left = res.register(func_a())
-        
-        if res.error: 
-            return res
-
-        while self.cur_token.type in ops or (self.cur_token.type, self.cur_token.value) in ops:
-            op_tok = self.cur_token
-            res.register_forward()
-            self.forward()
-            right = res.register(func_b())
-            if res.error: return res
-            left = BinOpNode(left, op_tok, right)
-
-        return res.success(left)
-
 ######################
 #    Parse Result    #
 ######################

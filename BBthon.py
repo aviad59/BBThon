@@ -88,6 +88,9 @@ class Lexer:
             elif self.curChar == '/':
                 tokens.append(Token(T_DIV, pos_start=self.pos))
                 self.forward()
+            elif self.curChar == "$":
+                tokens.append(Token(T_DOLLAR, pos_start=self.pos))
+                self.forward()
             elif self.curChar == '^':
                 tokens.append(Token(T_POW, pos_start=self.pos))
                 self.forward() 
@@ -96,6 +99,12 @@ class Lexer:
                 self.forward() 
             elif self.curChar == ')':
                 tokens.append(Token(T_RPAREN, pos_start=self.pos))
+                self.forward() 
+            elif self.curChar == '[':
+                tokens.append(Token(T_LSQUARE, pos_start=self.pos))
+                self.forward() 
+            elif self.curChar == ']':
+                tokens.append(Token(T_RSQUARE, pos_start=self.pos))
                 self.forward() 
             elif self.curChar == '!':
                 tok, error = self.create_not_equal()

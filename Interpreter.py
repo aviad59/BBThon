@@ -54,6 +54,8 @@ class Interpreter:
             result, error = left.multiplyed_by(right)
         elif node.op_token.type == T_DIV:
             result, error = left.divided_by(right)
+        elif node.op_token.type == T_DOLLAR:
+            result, error = left.dollar_index(right)
         elif node.op_token.type == T_POW:
             result, error = left.powered_by(right)
         elif node.op_token.type == T_EE:
@@ -116,6 +118,7 @@ class Interpreter:
 
     def visit_ForNode(self, node, context):
         res = RTResult()
+        elements = []
 
         start_value = res.register(self.visit(node.start_value, context))
         if res.error: return res
@@ -140,24 +143,25 @@ class Interpreter:
             context.SymbolTable.SetValue(node.variable_name_token.value, Number(i))
             i += step_value.value
 
-            res.register(self.visit(node.body_node, context))
+            elements.append(res.register(self.visit(node.body_node, context)))
             if res.error: return res
         
-        return res.success(None)
+        return res.success(List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
 
     def visit_WhileNode(self, node, context):
         res = RTResult()
-        
+        elements = []
+
         while True:
             condition = res.register(self.visit(node.condition_node, context))
             if res.error: return res
 
             if not condition.is_true(): break
 
-            res.register(self.visit(node.body_node, context))
+            elements.append(res.register(self.visit(node.body_node, context)))
             if res.error: return res
 
-        return res.success(None)
+        return res.success(List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
 
     def visit_FunctionNode(self, node, context):
         res = RTResult()
@@ -194,6 +198,16 @@ class Interpreter:
             String(node.token.value).set_context(context).set_pos(node.pos_start, node.pos_end)
         )
         
+    def visit_ListNode(self, node, context):
+        res = RTResult()
+        elements = []
+
+        for element_node in node.element_nodes:
+            elements.append(res.register(self.visit(element_node, context)))
+            if res.error: return res
+        
+        return res.success(List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
+
 #######################
 #     Symbol Table    #
 #######################
@@ -272,6 +286,9 @@ class Value:
         return None, self.illegal_operation(other)
 
     def divided_by(self, other):
+        return None, self.illegal_operation(other)
+
+    def dollar_index(self, other):
         return None, self.illegal_operation(other)
 
     def powered_by(self, other):
@@ -450,6 +467,53 @@ class String(Value):
 
     def __repr__(self):
         return f'"{self.value}"'
+
+class List(Value):
+    def __init__(self, elements):
+        super().__init__()
+        self.elements = elements    
+
+    def added_to(self, other):
+        new_list = self.copy()
+        new_list.elements.append(other)
+        return new_list, None
+
+    def substrcted_by(self, other):
+        if isinstance(other, Number):
+            new_list = self.copy()
+            try:
+                new_list.elements.pop(other.value)
+                return new_list, None
+            except:
+                return None, RTError("חווטל ץוחמ אוה יכ הזה סקדניאב רביאה תא קוחמל ןתינ אל", self.pos_start, self.pos_end, self.context)
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def multiplyed_by(self, other):
+        if isinstance(other, Number):
+            new_list = self.copy()
+            new_list.elements = new_list.elements * other.value
+            return new_list, None
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def dollar_index(self, other):
+        if isinstance(other, Number):
+            try:
+                return self.elements[other.value], None
+            except:
+                return None, RTError("חווטל ץוחמ אוה יכ הזה סקדניאב רביאה תא לבקל ןתינ אל", self.pos_start, self.pos_end, self.context)
+        else:
+            return None, Value.illegal_operation(self, other) 
+
+    def copy(self):
+        copy = List(self.elements[:])
+        copy.set_pos(self.pos_start, self.pos_end)
+        copy.set_context(self.context)
+        return copy
+
+    def __repr__(self):
+        return f'[{", ".join([str(x) for x in self.elements])}]'
 
 class Function(Value):
     def __init__(self, name, body_node, arg_names):

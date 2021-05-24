@@ -19,7 +19,6 @@ class InvalidSyntaxError(Error):
 class ExpectedCharError(Error):
     def __init__(self, details, pos_start, pos_end):
         super().__init__("םינכומ אל ונספתנ ירעצל ,םירקי םיחרזא", details, pos_start, pos_end)
-
 class RTError(Error):
     def __init__(self, details, pos_start, pos_end, context):
         super().__init__(":הלשממל הצירה ןמזב האיגש תארק", details, pos_start, pos_end)

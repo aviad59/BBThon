@@ -44,10 +44,14 @@ T_PLUS        = "PLUS"
 T_MINUS       = "MINUS"
 T_MUL         = "MUL"
 T_DIV         = "DIV"
+T_DOLLAR      = "DOLLAR"
 T_POW         = "POW"
 
 T_LPAREN      = "LPAREN"
 T_RPAREN      = "RPAREN"
+
+T_LSQUARE     = "LSQUARE"
+T_RSQUARE     = "RSQUARE"
 
 # Functions
 T_COMMA       = "COMMA"

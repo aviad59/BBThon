@@ -1,36 +1,39 @@
-expr				: KEYWORD:VAR IDENTIFIER EQ expr
-						: comp-expr ((KEYWORD:וגם|KEYWORD:או) comp-expr)*
+expr		: KEYWORD:שוחד IDENTIFIER EQ expr
+				: comp-expr ((KEYWORD:וגם|KEYWORD:או) comp-expr)*
 
-comp-expr			: NOT comp-expr
-						: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+comp-expr	: NOT comp-expr
+				: arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
 
-arith-expr			:	term ((PLUS|MINUS) term)*
+arith-expr	:	term ((PLUS|MINUS) term)*
 
-term				: factor ((MUL|DIV) factor)*
+term		: factor ((MUL|DIV) factor)*
 
-factor				: (PLUS|MINUS) factor
-						: power
+factor		: (PLUS|MINUS) factor
+				: power
 
-power				: call (POW factor)*
+power		: call (POW factor)*
 
-call				: atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
+call		: atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
 
-atom 				: INT|FLOAT|IDENTIFIER
-						: LPAREN expr RPAREN
-						: if-expr
-						: for-expr
-						: while-expr
-						: func-def
+atom 		: INT|FLOAT|IDENTIFIER
+				: LPAREN expr RPAREN
+				: list-expr
+				: if-expr
+				: for-expr
+				: while-expr
+				: func-def
 
-if-expr				: KEYWORD:אם expr KEYWORD:אז expr
-						(KEYWORD:אחרם expr KEYWORD:אז expr)*
-						(KEYWORD:אחרת expr)?
+list-expr	: LSQUARE (expr (COMMA expr)*)? RSQUARE
 
-for-expr			: KEYWORD:בשביל IDENTIFIER EQ expr KEYWORD:עד expr 
-						(KEYWORD:קפוץ expr)? KEYWORD:אז expr
+if-expr		: KEYWORD:אם expr KEYWORD:אז expr
+				(KEYWORD:אחרם expr KEYWORD:אז expr)*
+				(KEYWORD:אחרת expr)?
 
-while-expr			: KEYWORD:כלעוד expr KEYWORD:אז expr
+for-expr	: KEYWORD:בשביל IDENTIFIER EQ expr KEYWORD:עד expr 
+				(KEYWORD:קפוץ expr)? KEYWORD:אז expr
 
-func-def			: KEYWORD:מוחמדף IDENTIFIER?
-						LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
-						ARROW expr
+while-expr	: KEYWORD:כלעוד expr KEYWORD:אז expr
+
+func-def	: KEYWORD:מוחמדף IDENTIFIER?
+				LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
+				ARROW expr
