@@ -245,9 +245,25 @@ class Lexer:
 ########################
 
 global_symbols_table = SymbolTable()
-global_symbols_table.SetValue('כלום', Number(0))
-global_symbols_table.SetValue('ליכוד', Number(1))
-global_symbols_table.SetValue('מרצ', Number(0))
+global_symbols_table.SetValue('כלום', Number.NULL)
+global_symbols_table.SetValue('ליכוד', Number.LIKUD)
+global_symbols_table.SetValue('מרצ', Number.MERETZ)
+
+global_symbols_table.SetValue('פאי', Number.math_pi)
+
+global_symbols_table.SetValue('שרה', BuiltInFunction.print)
+global_symbols_table.SetValue('עיתונאים', BuiltInFunction.input)
+global_symbols_table.SetValue('העלם_ראיות', BuiltInFunction.clear)
+global_symbols_table.SetValue('האם_מספר', BuiltInFunction.is_number)
+global_symbols_table.SetValue('האם_מחרוזת', BuiltInFunction.is_string)
+global_symbols_table.SetValue('האם_רשימה', BuiltInFunction.is_list)
+global_symbols_table.SetValue('האם_פונקציה', BuiltInFunction.is_function)
+global_symbols_table.SetValue('הוסף', BuiltInFunction.append)
+global_symbols_table.SetValue('מחק', BuiltInFunction.remove)
+global_symbols_table.SetValue('שלוף', BuiltInFunction.pop)
+global_symbols_table.SetValue('הרחב', BuiltInFunction.extend)
+global_symbols_table.SetValue('מחרוזת_לרשימה', BuiltInFunction.stringToList)
+global_symbols_table.SetValue('האם_שמאלני', BuiltInFunction.isLeft)
 
 def run(file_name, text):
 

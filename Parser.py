@@ -439,7 +439,7 @@ class Parser:
         self.forward() 
         
         if self.cur_token.type != T_POINTER:
-            return res.failure(InvalidSyntaxError('"-<"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+            return res.failure(InvalidSyntaxError('"->"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
         
         res.register_forward()
         self.forward()       

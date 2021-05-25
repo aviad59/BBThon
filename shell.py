@@ -11,4 +11,4 @@ while True:
   result, error = BBthon.run('.ץבוק אל הז הא', text)
 
   if error: print(error)
-  elif result: print(result)
+  elif result: print(repr(result))
