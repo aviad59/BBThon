@@ -1,7 +1,7 @@
 import string
 
 DIGITS = '1234567890'
-LETTERS = string.ascii_letters + "אבגדהוזחטיכלמנסעפצקרשתץףם"
+LETTERS = string.ascii_letters + "אבגדהוזחטיכלמנסעפצקרשתךץףם"
 LETTERS_AND_DIGITS = LETTERS + DIGITS
 
 # Keywords

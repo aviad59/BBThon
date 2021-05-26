@@ -719,7 +719,7 @@ class BuiltInFunction(BaseFunction):
 
         if not isinstance(st, String):
             return RTResult().failure(RTError(
-                "תזורחמ תויהל בייח ןושארה טלקה", self.pos_start, self.pos_end, exec_context
+                "תזורחמ תויהל בייח טלקה", self.pos_start, self.pos_end, exec_context
             ))
 
         str_ = ""
@@ -743,6 +743,38 @@ class BuiltInFunction(BaseFunction):
             return RTResult().success(Number.MERETZ)
     execute_isLeft.arg_names = ['string']
 
+    def execute_length(self, exec_context):
+        var = exec_context.SymbolTable.GetValue('var')
+
+        if not isinstance(var, String) and not isinstance(var, List):
+            return RTResult().failure(RTError(
+                "המישר וא תזורחמ תויהל בייח טלקה", self.pos_start, self.pos_end, exec_context
+            ))
+
+        if isinstance(var, String):
+            return RTResult().success(Number(len(var.value)))
+        else:
+            return RTResult().success(Number(len(var.elements)))
+    execute_length.arg_names = ['var']
+
+    def execute_stringToNumber(self, exec_context):
+        st = exec_context.SymbolTable.GetValue('string')
+   
+        if not isinstance(st, String):
+            return RTResult().failure(RTError(
+                "תזורחמ תויהל בייח טלקה", self.pos_start, self.pos_end, exec_context
+            ))
+
+        
+
+        try:
+            return RTResult().success(Number(int(st.value)))
+        except:
+            return RTResult().failure(RTError(
+                "רפסמל רימהל ןתינ אל", self.pos_start, self.pos_end, exec_context
+            ))  
+    execute_stringToNumber.arg_names = ['string']
+   
     def no_visit(self):
         raise Exception(f'No execute_{self.name} method defined')
     
@@ -778,4 +810,6 @@ BuiltInFunction.pop             = BuiltInFunction("pop")
 BuiltInFunction.extend          = BuiltInFunction("extend")
 BuiltInFunction.stringToList    = BuiltInFunction("stringToList")
 BuiltInFunction.isLeft          = BuiltInFunction("isLeft")
+BuiltInFunction.length          = BuiltInFunction("length")
+BuiltInFunction.stringToNumber  = BuiltInFunction("stringToNumber")
 

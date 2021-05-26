@@ -263,7 +263,9 @@ global_symbols_table.SetValue('מחק', BuiltInFunction.remove)
 global_symbols_table.SetValue('שלוף', BuiltInFunction.pop)
 global_symbols_table.SetValue('הרחב', BuiltInFunction.extend)
 global_symbols_table.SetValue('מחרוזת_לרשימה', BuiltInFunction.stringToList)
+global_symbols_table.SetValue('מחרוזת_למספר', BuiltInFunction.stringToNumber)
 global_symbols_table.SetValue('האם_שמאלני', BuiltInFunction.isLeft)
+global_symbols_table.SetValue('אורך', BuiltInFunction.length)
 
 def run(file_name, text):
 
@@ -279,7 +281,7 @@ def run(file_name, text):
 
     # create interpreter
     interpreter = Interpreter()
-    context = Context('~תיסיסבה תינכות~')
+    context = Context('~תיסיסבה תינכותה~')
     context.SymbolTable = global_symbols_table
     
     result = interpreter.visit(ast.node, context)
