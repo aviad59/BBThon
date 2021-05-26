@@ -325,7 +325,7 @@ class Parser:
         self.forward()
 
         if self.cur_token.type != T_EQ:
-            return res.failure(InvalidSyntaxError('"="ציפיתי ל'))
+            return res.failure(InvalidSyntaxError('"=" ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
 
         res.register_forward()
         self.forward()

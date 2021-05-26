@@ -689,11 +689,11 @@ class BuiltInFunction(BaseFunction):
             ))
 
         try:
-            element = list_.elements.pop(0)
+            element = list_.elements.pop(len(list_.elements) - 1)
         except:
             return RTResult().failure("חווטל ץוחמ אוה יכ הזה סקדניאב רביאה תא לבקל ןתינ אל", self.pos_start, self.pos_end, self.context)
         
-        return element
+        return RTResult().success(element)
     execute_pop.arg_names = ['list']
 
     def execute_extend(self, exec_context):
