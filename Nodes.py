@@ -70,29 +70,33 @@ class IFNode:
         self.else_case = else_case
 
         self.pos_start = self.cases[0][0].pos_start
-        self.pos_end = (self.else_case or self.cases[len(self.cases) - 1][0]).pos_end
+        self.pos_end = (self.else_case or self.cases[len(self.cases) - 1])[0].pos_end
 class ForNode:
-    def __init__(self, variable_name_token, start_value, end_value, step_value, body_node):
+    def __init__(self, variable_name_token, start_value, end_value, step_value, body_node, return_null):
         self.variable_name_token = variable_name_token
         self.start_value = start_value
         self.end_value = end_value
         self.step_value = step_value
         self.body_node = body_node
+        self.return_null = return_null
         
         self.pos_start = self.variable_name_token.pos_start
         self.pos_end = self.body_node.pos_end
 class WhileNode:
-    def __init__(self, condition_node, body_node):
+    def __init__(self, condition_node, body_node, return_null):
         self.condition_node = condition_node
         self.body_node = body_node
+        self.return_null = return_null
 
         self.pos_start = self.condition_node.pos_start
         self.pos_end = self.body_node.pos_end
 class FunctionNode:
-    def __init__(self, variable_name_token, arg_name_tokens, body_node):
+    def __init__(self, variable_name_token, arg_name_tokens, body_node, return_null):
         self.var_name_tok = variable_name_token
         self.arg_name_toks = arg_name_tokens
         self.body_node = body_node
+
+        self.return_null = return_null
 
         if self.var_name_tok:
             self.pos_start = self.var_name_tok.pos_start

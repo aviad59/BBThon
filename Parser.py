@@ -1,3 +1,4 @@
+from typing import Sequence
 from constants import *
 from errors import *
 from Nodes import *
@@ -11,18 +12,26 @@ class Parser:
         self.tok_index = -1
         self.forward()
 
-    def forward(self, ):
+    def forward(self):
         self.tok_index += 1
-        if self.tok_index < len(self.tokens):
-            self.cur_token = self.tokens[self.tok_index]
+        self.update_current_token()
+        return self.cur_token
+    
+    def backward(self, amount=1):
+        self.tok_index -= amount
+        self.update_current_token()
         return self.cur_token
 
+    def update_current_token(self):
+        if self.tok_index >= 0 and self.tok_index < len(self.tokens):
+            self.cur_token = self.tokens[self.tok_index]
+
     def parse(self):
-        res = self.expression()
+        res = self.statements()
         if not res.error and self.cur_token.type != T_EOF:
             return res.failure(InvalidSyntaxError("- + / * ) ( == > < >= <=:ב שמתשת השקבב הלועפ אל תאז", self.cur_token.pos_start, self.cur_token.pos_end))
         return res
-
+        
     def extract_op(self, func_a, ops, func_b = None):
         if func_b == None:
             func_b = func_a
@@ -43,10 +52,46 @@ class Parser:
 
         return res.success(left)
 
+    def statements(self):
+        res = ParseResult()
+        statements = []
+        pos_start = self.cur_token.pos_start.copy()
+
+        while self.cur_token.type == T_NEWLINE:
+            res.register_forward()
+            self.forward()
+
+        statement = res.register(self.expression())
+        if res.error: return res
+        statements.append(statement)
+
+        more_statements = True
+
+        while True:
+            newlines_count = 0
+            while self.cur_token.type == T_NEWLINE:
+                res.register_forward()
+                self.forward()
+                newlines_count += 1
+            if newlines_count == 0:
+                more_statements = False
+            
+            if not more_statements: 
+                break
+
+            statement = res.try_register(self.expression())
+            if not statement:
+                self.backward(res.to_reverse_count)
+                more_statements = False
+                continue
+            statements.append(statement)
+
+        return res.success(ListNode(statements, pos_start, self.cur_token.pos_end.copy()))
+
     def expression(self):
         res = ParseResult()
 
-        if self.cur_token.match(T_KEYWORD, 'שוחד'):
+        if self.cur_token.match(T_KEYWORD, 'מתנה'):
             res.register_forward()
             self.forward()
 
@@ -260,11 +305,63 @@ class Parser:
     
     def if_expression(self):
         res = ParseResult()
+        cases_all = res.register(self.if_expression_cases('אם'))
+        if res.error: return res
+        cases, else_cases = cases_all
+        return res.success(IFNode(cases, else_cases))
+    
+    def if_expression_elif(self):
+        return self.if_expression_cases('אחרם')
+
+    def if_expression_else(self):
+        res = ParseResult()
+        else_case = None     
+
+        if self.cur_token.match(T_KEYWORD, 'אחרת'):
+            res.register_forward()
+            self.forward()
+            
+            if self.cur_token.type == T_NEWLINE:
+                res.register_forward()
+                self.forward()
+                
+                statements = res.register(self.statements())
+                if res.error: return res
+                else_case = (statements, True)
+
+                if self.cur_token.match(T_KEYWORD, 'סיום'):
+                    res.register_forward()
+                    self.forward()
+                else:
+                    return res.failure(InvalidSyntaxError("!רוגס אל קיתה", self.cur_token.pos_start, self.cur_token.pos_end))
+            else:
+                expr = res.register(self.expression())
+                if res.error: return res
+                else_case = (expr, False)
+
+        return res.success(else_case)
+
+    def if_expression_else_or_elif(self):
+        res = ParseResult()
+        cases, else_case = [], None
+
+        if self.cur_token.match(T_KEYWORD, 'אחרם'):
+            all_cases = res.register(self.if_expression_elif())
+            if res.error: return res
+            cases, else_case = all_cases
+        else:
+            else_case = res.register(self.if_expression_else())
+            if res.error: return res
+        
+        return res.success((cases, else_case))
+
+    def if_expression_cases(self, case_keyword):
+        res = ParseResult()
         cases = []
         else_case = None
 
-        if not self.cur_token.match(T_KEYWORD, 'אם'):
-            return res.failure(InvalidSyntaxError("'םא' יאנתל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
+        if not self.cur_token.match(T_KEYWORD, case_keyword):
+            return res.failure(InvalidSyntaxError(f"'{case_keyword}' יאנתל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
 
         res.register_forward()
         self.forward()
@@ -278,35 +375,33 @@ class Parser:
         res.register_forward()
         self.forward()
 
-        expr = res.register(self.expression())
-        if res.error: return res
-        cases.append((condition, expr))
-
-        while self.cur_token.match(T_KEYWORD, 'אחרם'):
+        if self.cur_token.type == T_NEWLINE:
             res.register_forward()
             self.forward()
 
-            condition = res.register(self.expression())
+            statements = res.register(self.statements())
             if res.error: return res
+            cases.append((condition, statements, True))
 
-            if not self.cur_token.match(T_KEYWORD, 'אז'):
-                return res.failure(InvalidSyntaxError("'זא' יאנתל יתיפיצ", self.cur_token.pos_start, self.cur_token.pos_end))
-
-            res.register_forward()
-            self.forward()
-
+            if self.cur_token.match(T_KEYWORD, 'סיום'):
+                res.register_forward()
+                self.forward()
+            else:
+                all_cases = res.register(self.if_expression_else_or_elif())
+                if res.error: return res
+                new_cases, else_case = all_cases
+                cases.extend(new_cases)
+        else:
             expr = res.register(self.expression())
             if res.error: return res
-            cases.append((condition, expr))
+            cases.append((condition, expr, False))
 
-        if self.cur_token.match(T_KEYWORD, 'אחרת'):
-            res.register_forward()
-            self.forward()
-
-            else_case = res.register(self.expression())
+            all_cases = res.register(self.if_expression_else_or_elif())
             if res.error: return res
+            new_cases, else_case = all_cases
+            cases.extend(new_cases)
 
-        return res.success(IFNode(cases, else_case))
+        return res.success((cases, else_case))
 
     def for_expression(self):
         res = ParseResult()
@@ -353,6 +448,24 @@ class Parser:
 
         if not self.cur_token.match(T_KEYWORD, 'אז'):
             return res.failure(InvalidSyntaxError('"זא"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+        
+        res.register_forward()
+        self.forward()
+
+        if self.cur_token.type == T_NEWLINE:
+            res.register_forward()
+            self.forward()
+
+            body = res.register(self.statements())
+            if res.error: return res
+
+            if not self.cur_token.match(T_KEYWORD, 'סיום'):
+                return res.failure(InvalidSyntaxError('"םויס"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+            res.register_forward()
+            self.forward()
+
+            return res.success(ForNode(variable_name, start_value, end_value, step_value, body, True))
 
         res.register_forward()
         self.forward()
@@ -360,7 +473,7 @@ class Parser:
         body = res.register(self.expression())
         if res.error: return res
 
-        return res.success(ForNode(variable_name, start_value, end_value, step_value, body))
+        return res.success(ForNode(variable_name, start_value, end_value, step_value, body, False))
 
     def while_expression(self):
         res = ParseResult()
@@ -380,10 +493,26 @@ class Parser:
         res.register_forward()
         self.forward()
 
+        if self.cur_token.type == T_NEWLINE:
+            res.register_forward()
+            self.forward()
+
+            body = res.register(self.statements())
+            if res.error: return res
+
+            if not self.cur_token.match(T_KEYWORD, 'סיום'):
+                return res.failure(InvalidSyntaxError('"םויס"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+            res.register_forward()
+            self.forward()
+
+            return res.success(WhileNode(condition, body, True))
+
+
         body = res.register(self.expression())
         if res.error: return res
 
-        return res.success(WhileNode(condition, body))
+        return res.success(WhileNode(condition, body, False))
 
     def func_def(self):
         res = ParseResult()
@@ -438,21 +567,43 @@ class Parser:
         res.register_forward()
         self.forward() 
         
-        if self.cur_token.type != T_POINTER:
-            return res.failure(InvalidSyntaxError('"->"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
-        
+        if self.cur_token.type == T_POINTER:
+            res.register_forward()
+            self.forward()       
+            
+            node_to_return = res.register(self.expression())
+            if res.error: return res
+            
+            return res.success(FunctionNode(
+                var_name_tok,
+                arg_name_toks,
+                node_to_return,
+                False
+            ))
+
+        if not self.cur_token.type != T_NEWLINE:
+            return res.failure(InvalidSyntaxError('השדח הרושל וא "->"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
         res.register_forward()
-        self.forward()       
-        
-        node_to_return = res.register(self.expression())
+        self.forward() 
+
+        body = res.register(self.statements())
         if res.error: return res
-        
+
+        if not self.cur_token.match(T_KEYWORD, 'סיום'):
+            return res.failure(InvalidSyntaxError('"םויס"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
+
+        res.register_forward()
+        self.forward() 
+
         return res.success(FunctionNode(
-            var_name_tok,
-            arg_name_toks,
-            node_to_return
-        ))
-                
+                var_name_tok,
+                arg_name_toks,
+                body,
+                True
+            ))
+
+
 ######################
 #    Parse Result    #
 ######################
@@ -460,12 +611,22 @@ class ParseResult:
     def __init__(self):
         self.error = None
         self.node = None
+        self.last_registered_forward_count = 0
         self.forward_count = 0
+        self.to_reverse_count = 0
+
+    def try_register(self, res):
+        if res.error:
+            self.to_reverse_count = res.forward_count
+            return None
+        return self.register(res)
 
     def register_forward(self):
+        self.last_registered_forward_count = 1
         self.forward_count += 1      
 
     def register(self, res): 
+        self.last_registered_forward_count = res.forward_count
         self.forward_count += res.forward_count
         if res.error: self.error = res.error
         return res.node
@@ -475,6 +636,6 @@ class ParseResult:
         return self
 
     def failure(self, error):
-        if not self.error or self.forward_count == 0:
+        if not self.error or self.last_registered_forward_count == 0:
             self.error = error
         return self

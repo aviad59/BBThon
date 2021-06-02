@@ -6,7 +6,7 @@ LETTERS_AND_DIGITS = LETTERS + DIGITS
 
 # Keywords
 KEYWORDS = [
-    'שוחד',
+    'מתנה',
     'וגם',
     'או',
     'לא',
@@ -18,7 +18,8 @@ KEYWORDS = [
     'עד',
     'קפוץ',
     'כלעוד',
-    'מוחמדף'
+    'מוחמדף',
+    'סיום'
 ]
 
 # Types
@@ -58,4 +59,5 @@ T_COMMA       = "COMMA"
 T_POINTER     = "ARROW" 
 
 # Misc
+T_NEWLINE     = "NEWLINE"
 T_EOF         = "EOF"

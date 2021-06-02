@@ -63,17 +63,17 @@ class Interpreter:
         elif node.op_token.type == T_POW:
             result, error = left.powered_by(right)
         elif node.op_token.type == T_EE:
-    	    result, error = left.GetValue_comparison_eq(right)
+    	    result, error = left.get_comparison_eq(right)
         elif node.op_token.type == T_NE:
-        	result, error = left.GetValue_comparison_ne(right)
+        	result, error = left.get_comparison_ne(right)
         elif node.op_token.type == T_LT:
-        	result, error = left.GetValue_comparison_lt(right)
+        	result, error = left.get_comparison_lt(right)
         elif node.op_token.type == T_GT:
-        	result, error = left.GetValue_comparison_gt(right)
+        	result, error = left.get_comparison_gt(right)
         elif node.op_token.type == T_LTE:
-        	result, error = left.GetValue_comparison_lte(right)
+        	result, error = left.get_comparison_lte(right)
         elif node.op_token.type == T_GTE:
-        	result, error = left.GetValue_comparison_gte(right)
+        	result, error = left.get_comparison_gte(right)
         elif node.op_token.match(T_KEYWORD, 'וגם'):
         	result, error = left.anded_by(right)
         elif node.op_token.match(T_KEYWORD, 'או'):
@@ -104,21 +104,22 @@ class Interpreter:
     def visit_IFNode(self, node , context):
         res = RTResult()
 
-        for condition, expr in node.cases:
+        for condition, expr, return_null in node.cases:
             condition_value = res.register(self.visit(condition, context))
             if res.error: return res
              
             if condition_value.is_true():
                 expr_value = res.register(self.visit(expr, context))
                 if res.error: return res
-                return res.success(expr_value)
+                return res.success(Number.NULL if return_null else expr_value)
 
             if node.else_case:
-                else_value = res.register(self.visit(node.else_case, context))
+                expr, return_null = node.else_case 
+                else_value = res.register(self.visit(expr, context))
                 if res.error: return res 
-                return res.success(else_value)
+                return res.success(Number.NULL if return_null else else_value)
 
-            return res.success(None)
+            return res.success(Number.NULL)
 
     def visit_ForNode(self, node, context):
         res = RTResult()
@@ -150,7 +151,7 @@ class Interpreter:
             elements.append(res.register(self.visit(node.body_node, context)))
             if res.error: return res
         
-        return res.success(List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
+        return res.success(Number.NULL if node.return_null else List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
 
     def visit_WhileNode(self, node, context):
         res = RTResult()
@@ -161,11 +162,11 @@ class Interpreter:
             if res.error: return res
 
             if not condition.is_true(): break
-
+ 
             elements.append(res.register(self.visit(node.body_node, context)))
             if res.error: return res
 
-        return res.success(List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
+        return res.success(Number.NULL if node.return_null else List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
 
     def visit_FunctionNode(self, node, context):
         res = RTResult()
@@ -173,7 +174,7 @@ class Interpreter:
         func_name = node.var_name_tok.value if node.var_name_tok else None
         body_node = node.body_node
         arg_names = [arg_name.value for arg_name in node.arg_name_toks]
-        func_value = Function(func_name, body_node, arg_names).set_context(context).set_pos(node.pos_start, node.pos_end)
+        func_value = Function(func_name, body_node, arg_names, node.return_null).set_context(context).set_pos(node.pos_start, node.pos_end)
 
         if node.var_name_tok:
             context.SymbolTable.SetValue(func_name, func_value)
@@ -223,7 +224,7 @@ class SymbolTable:
     def GetValue(self, name):
         value = self.local_symbols_dict.get(name, None)
         if value == None and self.global_symbols_dict:
-           value = self.global_symbols_dict.get(name) 
+           value = self.global_symbols_dict.GetValue(name) 
         return value
 
     def SetValue(self, name, value):
@@ -564,11 +565,12 @@ class BaseFunction(Value):
         return res.success(None)
 
 class Function(BaseFunction):
-    def __init__(self, name, body_node, arg_names):
+    def __init__(self, name, body_node, arg_names, return_null):
         super().__init__(name)
         
         self.body_node = body_node
         self.arg_names = arg_names
+        self.return_null = return_null
 
     def execute(self, args):
         res = RTResult()
@@ -581,10 +583,10 @@ class Function(BaseFunction):
 
         value = res.register(interpreter.visit(self.body_node, exec_context)) 
         if res.error: return res
-        return res.success(value)
+        return res.success(Number.NULL if self.return_null else value)
 
     def copy(self):
-        copy = Function(self.name, self.body_node, self.arg_names)
+        copy = Function(self.name, self.body_node, self.arg_names, self.return_null)
         copy.set_pos(self.pos_start, self.pos_end)
         copy.set_context(self.context)
         return copy

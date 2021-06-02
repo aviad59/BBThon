@@ -71,6 +71,9 @@ class Lexer:
         while self.curChar != None:
             if self.curChar in ' \t':
                 self.forward()
+            elif self.curChar in ':\n':
+                tokens.append(Token(T_NEWLINE, pos_start=self.pos))
+                self.forward()
             elif self.curChar in DIGITS:
                 tokens.append(self.create_number())
             elif self.curChar in LETTERS:
@@ -252,9 +255,9 @@ global_symbols_table.SetValue('מרצ', Number.MERETZ)
 global_symbols_table.SetValue('פאי', Number.math_pi)
 
 global_symbols_table.SetValue('שרה', BuiltInFunction.print)
-global_symbols_table.SetValue('עיתונאים', BuiltInFunction.input)
+global_symbols_table.SetValue('תקשורת', BuiltInFunction.input)
 global_symbols_table.SetValue('העלם_ראיות', BuiltInFunction.clear)
-global_symbols_table.SetValue('האם_מספר', BuiltInFunction.is_number)
+global_symbols_table.SetValue('האם_שוחד', BuiltInFunction.is_number)
 global_symbols_table.SetValue('האם_מחרוזת', BuiltInFunction.is_string)
 global_symbols_table.SetValue('האם_רשימה', BuiltInFunction.is_list)
 global_symbols_table.SetValue('האם_פונקציה', BuiltInFunction.is_function)
