@@ -61,7 +61,7 @@ class Parser:
             res.register_forward()
             self.forward()
 
-        statement = res.register(self.expression())
+        statement = res.register(self.statement())
         if res.error: return res
         statements.append(statement)
 
@@ -79,7 +79,7 @@ class Parser:
             if not more_statements: 
                 break
 
-            statement = res.try_register(self.expression())
+            statement = res.try_register(self.statement())
             if not statement:
                 self.backward(res.to_reverse_count)
                 more_statements = False
@@ -87,6 +87,36 @@ class Parser:
             statements.append(statement)
 
         return res.success(ListNode(statements, pos_start, self.cur_token.pos_end.copy()))
+
+    def statement(self):
+        res = ParseResult()
+        pos_start = self.cur_token.pos_start.copy()
+
+        if self.cur_token.match(T_KEYWORD, 'החזר'):
+            res.register_forward()
+            self.forward()
+
+            expr = res.try_register(self.expression())
+            if not expr:
+                self.backward(res.to_reverse_count)
+            return res.success(ReturnNode(expr, pos_start, self.cur_token.pos_start.copy()))
+        
+        if self.cur_token.match(T_KEYWORD, 'המשך'):
+            res.register_forward()
+            self.forward()
+            return res.success(ContinueNode(pos_start, self.cur_token.pos_start.copy()))
+        
+        if self.cur_token.match(T_KEYWORD, 'הפסק'):
+            res.register_forward()
+            self.forward()
+            return res.success(BreakNode(pos_start, self.cur_token.pos_start.copy()))
+
+        expr = res.register(self.expression())
+        if res.error: 
+            return res.failure(InvalidSyntaxError(
+                '"אל" וא "]", ")", "-", "+", ,"ףדמחומ" ,"דועלכ" ,"ליבשב" ,"םא" ,"דחוש" ,רוצע ,קספה ,ךשמה ,ההזמ ,רפסמל יתיפיצ',pos_start, self.cur_token.pos_end))
+        
+        return res.success(expr)
 
     def expression(self):
         res = ParseResult()
@@ -335,7 +365,7 @@ class Parser:
                 else:
                     return res.failure(InvalidSyntaxError("!רוגס אל קיתה", self.cur_token.pos_start, self.cur_token.pos_end))
             else:
-                expr = res.register(self.expression())
+                expr = res.register(self.statements())
                 if res.error: return res
                 else_case = (expr, False)
 
@@ -392,7 +422,7 @@ class Parser:
                 new_cases, else_case = all_cases
                 cases.extend(new_cases)
         else:
-            expr = res.register(self.expression())
+            expr = res.register(self.statements())
             if res.error: return res
             cases.append((condition, expr, False))
 
@@ -470,7 +500,7 @@ class Parser:
         res.register_forward()
         self.forward()
 
-        body = res.register(self.expression())
+        body = res.register(self.statements())
         if res.error: return res
 
         return res.success(ForNode(variable_name, start_value, end_value, step_value, body, False))
@@ -509,7 +539,7 @@ class Parser:
             return res.success(WhileNode(condition, body, True))
 
 
-        body = res.register(self.expression())
+        body = res.register(self.statements())
         if res.error: return res
 
         return res.success(WhileNode(condition, body, False))
@@ -551,8 +581,6 @@ class Parser:
                 
                 if self.cur_token.type != T_IDENTIFIER:
                     return res.failure(InvalidSyntaxError('ההזמל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
-                    res.register_forward()
-                    self.forward()
         
                 arg_name_toks.append(self.cur_token)
                 res.register_forward()
@@ -571,17 +599,17 @@ class Parser:
             res.register_forward()
             self.forward()       
             
-            node_to_return = res.register(self.expression())
+            body = res.register(self.expression())
             if res.error: return res
             
             return res.success(FunctionNode(
                 var_name_tok,
                 arg_name_toks,
-                node_to_return,
-                False
+                body,
+                True
             ))
 
-        if not self.cur_token.type != T_NEWLINE:
+        if self.cur_token.type != T_NEWLINE:
             return res.failure(InvalidSyntaxError('השדח הרושל וא "->"ל יתיפיצ', self.cur_token.pos_start, self.cur_token.pos_end))
 
         res.register_forward()
@@ -600,9 +628,8 @@ class Parser:
                 var_name_tok,
                 arg_name_toks,
                 body,
-                True
+                False
             ))
-
 
 ######################
 #    Parse Result    #

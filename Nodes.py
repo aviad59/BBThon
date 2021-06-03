@@ -10,7 +10,6 @@ class NumberNode:
 
     def __repr__(self):
         return f'{self.token}'
-
 class StringNode:
     def __init__(self, tok):
         self.token = tok
@@ -20,7 +19,6 @@ class StringNode:
 
     def __repr__(self):
         return f'{self.token}'
-
 class ListNode:
     def __init__(self, element_nodes, pos_start, pos_end):
         self.element_nodes = element_nodes
@@ -30,7 +28,6 @@ class ListNode:
         
     def __repr__(self):
         return f'{self.element_nodes}'
-
 class VariableAccessNode:
     def __init__(self, variable_name):
         self.variable_name = variable_name
@@ -91,12 +88,12 @@ class WhileNode:
         self.pos_start = self.condition_node.pos_start
         self.pos_end = self.body_node.pos_end
 class FunctionNode:
-    def __init__(self, variable_name_token, arg_name_tokens, body_node, return_null):
+    def __init__(self, variable_name_token, arg_name_tokens, body_node, return_auto):
         self.var_name_tok = variable_name_token
         self.arg_name_toks = arg_name_tokens
         self.body_node = body_node
 
-        self.return_null = return_null
+        self.return_auto = return_auto
 
         if self.var_name_tok:
             self.pos_start = self.var_name_tok.pos_start
@@ -117,4 +114,17 @@ class CallFuncNode:
             self.pos_end = self.arg_node[len(self.arg_node) - 1].pos_end
         else:
             self.pos_end = self.node_to_call.pos_end
-
+class ReturnNode:
+    def __init__(self, return_node, pos_start, pos_end):
+        self.return_node = return_node
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+class ContinueNode:
+    def __init__(self, pos_start, pos_end):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+class BreakNode:
+    def __init__(self, pos_start, pos_end):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+ 
