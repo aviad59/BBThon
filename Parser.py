@@ -466,7 +466,7 @@ class Parser:
         end_value = res.register(self.expression())
         if res.error: return res
 
-        if self.cur_token.match(T_KEYWORD, 'קפוץ'):
+        if self.cur_token.match(T_KEYWORD, 'צעד'):
             res.register_forward()
             self.forward()
 
