@@ -1,4 +1,3 @@
-from typing import Sequence
 from constants import *
 from errors import *
 from Nodes import *
