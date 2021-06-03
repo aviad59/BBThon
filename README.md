@@ -41,6 +41,32 @@ The official repository of the official BIBI language - **BBthon!**
 
 </div>
 
+ על מנת להריץ את ביביתון יש צורך בגרסת פייתון 3.7.1 לפחות
+ (גרסאות נמוכות מזו לא נבדקו!)
+ 
+ `shell.py` לאחר העתקת כל הקבצים יש להפעיל באמצעות פייתון את הקובץ 
+ 
+ ```
+ python shell.py
+ ```
+ 
+ על מנת להריץ קובץ הוראות בביביתון יש לכתוב לאחר מכן את הפקודה הבאה עם שם הקובץ המתאים
+ 
+ ```
+ בחירות("שם_הקובץ")
+ ```
+ 
+הערה חשובה: הטרמינל במערכות ההפעלה כיום עובד משמאל לימין (ככל הנראה עקב אנטישמיות כמובן) ולכן אין מה לדאוג אם הפקודות נכתבות הפוך
+<div align="left">
+ 
+ ```
+ BBthon> תוריחב("דוגמה.bb")
+ ```
+ 
+</div>
+
+*(: פרוייקט עתידי: טרמינל כשר מימין לשמאל*
+ 
 <div align="center">
 
 # 📁Documentation📁
@@ -176,7 +202,7 @@ The official repository of the official BIBI language - **BBthon!**
 מוחמדף קואליציה(מספר) -> 61 - מספר
 ```
 ## **פעולות מובנות**
-## כלליות 
+### כלליות 
 
 `שרה(קלט)` הפעולה מדפיסה את הקלט למסך
 ```
@@ -190,7 +216,7 @@ The official repository of the official BIBI language - **BBthon!**
 ```
 ()העלם_ראיות
 ```
-## בדיקת טיפוס
+### בדיקת טיפוס
 `האם_שוחד(קלט)` הפעולה מחזירה 1 אם הקלט הוא שוחד אחרת 0
 ```
 (א)האם_שוחד
@@ -210,7 +236,7 @@ The official repository of the official BIBI language - **BBthon!**
 (א)האם_פונקציה
 ```
 
-## פעולות על רשימה
+### פעולות על רשימה
 `הוסף(רשימה ,קלט)` הפעולה מוסיפה את הקלט לרשימה
 ```
 מתנה א = [1,2,3]
@@ -242,7 +268,7 @@ The official repository of the official BIBI language - **BBthon!**
 ```
 מתנה ג = [1,2,3] + [4,5,6]
 ```
-## פעולות שונות
+### פעולות שונות
 
 `מחרוזת_לרשימה(מחרוזת)` הפעולה מחזירה מחרוזת בתור רשימת התווים בה
 ```
