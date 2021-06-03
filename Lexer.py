@@ -139,8 +139,8 @@ class Lexer:
         self.forward()
 
         escape_characters = {
-            'n': '\n',
-            't': '\t',
+            '\n': 'ש',
+            '\t': 'ט',
             'ב': 'ךלמה יביב',
             'ע': 'הרואמהמ אצ זר יליע'
         }
