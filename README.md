@@ -1,4 +1,4 @@
-<p align="right">
+<div align="right">
 # BBThon
 The offical repository of the offical BIBI language - **BBthon!**
 ![1018316866_optimized](https://user-images.githubusercontent.com/50523112/120692553-96e7e480-c4b0-11eb-81dd-1f47652c6033.png)
@@ -8,7 +8,6 @@ The offical repository of the offical BIBI language - **BBthon!**
 !אזרחים יקרים שלום, וברוכים הבאים למדריך לשפת ביבי
 שפת ביבי או בשמה הרישמי נכתבה בשפת פייתון למטרות הומור בלבד אין בכתיבת השפה מטרה לפגוע בשום צורה
 ועכשיו לאחר שהבהרנו את זה בואו נראה על מה מדובר
-
   
 ### **תוכן עניינים**
 * Requirements
@@ -84,4 +83,4 @@ The offical repository of the offical BIBI language - **BBthon!**
 סיום
 ```
 ## About
-</p>
+</div>
