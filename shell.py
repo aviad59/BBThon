@@ -9,7 +9,7 @@ import BBthon
 while True:
   text = input('BBthon> ')
   if text.strip() == "": continue
-  result, error = BBthon.run('.ץבוק אל הז הא', text)
+  result, error = BBthon.run('ץבוק אל הז הא', text)
 
   if error: print(error)
   elif result: 
