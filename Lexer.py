@@ -229,7 +229,7 @@ class Lexer:
 
         if self.curChar == '=':
             self.forward()
-            token_type == T_LTE
+            token_type = T_LTE
 
         return Token(token_type, pos_start=pos_start, pos_end=self.pos)
 
@@ -240,7 +240,7 @@ class Lexer:
 
         if self.curChar == '=':
             self.forward()
-            token_type == T_GTE
+            token_type = T_GTE
 
         return Token(token_type, pos_start=pos_start, pos_end=self.pos)
 
