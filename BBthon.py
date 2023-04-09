@@ -14,14 +14,17 @@ class Interpreter:
         method = getattr(self, method_name, self.no_visit_method)
         return method(node, context)
 
-    def no_visit_method(self, node, context):
+    @staticmethod
+    def no_visit_method(node):
         raise Exception(f'No visit_{type(node).__name__} method defined')   
 
-    def visit_NumberNode(self, node, context):
+    @staticmethod
+    def visit_NumberNode(node, context):
         return RTResult().success(
         Number(node.token.value).set_context(context).set_pos(node.pos_start, node.pos_end))
 
-    def visit_VariableAccessNode(self, node, context):
+    @staticmethod
+    def visit_VariableAccessNode(node, context):
         res = RTResult()
         variable_name = node.variable_name.value
         value = context.SymbolTable.GetValue(variable_name)
@@ -63,21 +66,21 @@ class Interpreter:
         elif node.op_token.type == T_POW:
             result, error = left.powered_by(right)
         elif node.op_token.type == T_EE:
-    	    result, error = left.get_comparison_eq(right)
+            result, error = left.get_comparison_eq(right)
         elif node.op_token.type == T_NE:
-        	result, error = left.get_comparison_ne(right)
+            result, error = left.get_comparison_ne(right)
         elif node.op_token.type == T_LT:
-        	result, error = left.get_comparison_lt(right)
+            result, error = left.get_comparison_lt(right)
         elif node.op_token.type == T_GT:
-        	result, error = left.get_comparison_gt(right)
+            result, error = left.get_comparison_gt(right)
         elif node.op_token.type == T_LTE:
-        	result, error = left.get_comparison_lte(right)
+            result, error = left.get_comparison_lte(right)
         elif node.op_token.type == T_GTE:
-        	result, error = left.get_comparison_gte(right)
+            result, error = left.get_comparison_gte(right)
         elif node.op_token.match(T_KEYWORD, 'וגם'):
-        	result, error = left.anded_by(right)
+            result, error = left.anded_by(right)
         elif node.op_token.match(T_KEYWORD, 'או'):
-        	result, error = left.ored_by(right)
+            result, error = left.ored_by(right)
 
         if error:
             return res.failure(error)
@@ -92,7 +95,7 @@ class Interpreter:
         error = None
 
         if node.op_token.type == T_MINUS:
-            number, Error = number.multiplyed_by(Number(-1))
+            number, error = number.multiplyed_by(Number(-1))
         elif node.op_token.match(T_KEYWORD, 'לא'):
             number, error = number.notted()
         
@@ -184,7 +187,8 @@ class Interpreter:
 
         return res.success(Number.NULL if node.return_null else List(elements).set_context(context).set_pos(node.pos_start, node.pos_end))
 
-    def visit_FunctionNode(self, node, context):
+    @staticmethod
+    def visit_FunctionNode(node, context):
         res = RTResult()
 
         func_name = node.var_name_tok.value if node.var_name_tok else None
@@ -214,7 +218,8 @@ class Interpreter:
         return_value = return_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
         return res.success(return_value)
 
-    def visit_StringNode(self, node, context):
+    @staticmethod
+    def visit_StringNode(node, context):
         return RTResult().success(
             String(node.token.value).set_context(context).set_pos(node.pos_start, node.pos_end)
         )
@@ -240,10 +245,12 @@ class Interpreter:
 
         return res.success_return(value)
 
-    def visit_ContinueNode(self, node, context):
+    @staticmethod
+    def visit_ContinueNode():
         return RTResult().success_continue()
 
-    def visit_BreakNode(self, node, context):
+    @staticmethod
+    def visit_BreakNode():
         return RTResult().success_break()
 
 #######################
@@ -363,36 +370,38 @@ class Value:
         return None, self.illegal_operation(other)
 
     def get_comparison_eq(self, other):
-	    return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
 
     def get_comparison_ne(self, other):
-	    return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
 
     def get_comparison_lt(self, other):
-    	return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
 
     def get_comparison_gt(self, other):
-    	return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
 
     def get_comparison_lte(self, other):
-    	return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
 
     def get_comparison_gte(self, other):
-    	return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
     
     def anded_by(self, other):
-    	return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
 
     def ored_by(self, other):
-    	return None, self.illegal_operation(other)
+        return None, self.illegal_operation(other)
 
     def notted(self):
-    	return None, self.illegal_operation()
+        return None, self.illegal_operation()
 
-    def copy(self):
-        raise Exception('No copy method defined')
+    @staticmethod
+    def copy():
+        raise NotImplementedError('No copy method defined')
 
-    def is_true(self):
+    @staticmethod
+    def is_true():
         return False
 
     def illegal_operation(self, other=None):
@@ -459,12 +468,12 @@ class Number(Value):
             return None, Value.illegal_operation(self.pos_start, self.pos_end)
 
     def get_comparison_lt(self, other):
-    	if isinstance(other, Number):
-    		return Number(int(self.value < other.value)).set_context(self.context), None
+        if isinstance(other, Number):
+            return Number(int(self.value < other.value)).set_context(self.context), None
 
     def get_comparison_gt(self, other):
         if isinstance(other, Number):
-    	    return Number(int(self.value > other.value)).set_context(self.context), None
+            return Number(int(self.value > other.value)).set_context(self.context), None
         else:
             return None, Value.illegal_operation(self.pos_start, self.pos_end)
 
@@ -493,7 +502,7 @@ class Number(Value):
             return None, Value.illegal_operation(self.pos_start, self.pos_end)
 
     def notted(self):
-    	return Number(1 if self.value == 0 else 0).set_context(self.context), None
+        return Number(1 if self.value == 0 else 0).set_context(self.context), None
 
     def copy(self):
         copy = Number(self.value)
@@ -612,10 +621,9 @@ class BaseFunction(Value):
 
         return res.success(None)
     
-    def populate_args(self, args_names, args, exectue_context):
-        for i in range(len(args)):
-            arg_name = args_names[i]
-            arg_value = args[i]
+    @staticmethod
+    def populate_args(args_names, args, exectue_context):
+        for (arg_name, arg_value) in zip(args_names, args):
             arg_value.set_context(exectue_context)
             exectue_context.SymbolTable.SetValue(arg_name, arg_value)
     
@@ -683,12 +691,12 @@ class BuiltInFunction(BaseFunction):
         return RTResult().success(String(str(exec_context.SymbolTable.GetValue('value'))))
     execute_print.arg_names = ['value']
 
-    def execute_input(self, exec_context):
+    def execute_input(self):
         text = input()
         return RTResult().success(String(text))
     execute_input.arg_names = []
 
-    def execute_clear(self, exec_context):
+    def execute_clear(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         return RTResult().success(Number.NULL)
     execute_clear.arg_names = []
@@ -758,7 +766,7 @@ class BuiltInFunction(BaseFunction):
         try:
             element = list_.elements.pop(len(list_.elements) - 1)
         except:
-            return RTResult().failure("חווטל ץוחמ אוה יכ הזה סקדניאב רביאה תא לבקל ןתינ אל", self.pos_start, self.pos_end, self.context)
+            return RTResult().failure(RTError("חווטל ץוחמ אוה יכ הזה סקדניאב רביאה תא לבקל ןתינ אל", self.pos_start, self.pos_end, self.context))
         
         return RTResult().success(element)
     execute_pop.arg_names = ['list']
